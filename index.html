@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HLZ Chat</title>
+<style>
+:root{--bg:#0f1115;--p:#171a21;--p2:#1f232c;--t:#fff;--g:#8b93a1;--a:#3b82f6;--b:#2a2f3a}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--t);font:15px system-ui,sans-serif}
+button,input{font:inherit;color:inherit}
+input{background:var(--p2);border:1px solid var(--b);border-radius:10px;padding:10px 12px;outline:0;width:100%}
+input:focus{border-color:var(--a)}
+button{background:var(--a);border:0;border-radius:10px;padding:10px 14px;cursor:pointer}
+button.i{background:var(--p2);padding:9px 12px}
+.hide{display:none!important}
+#auth{display:flex;height:100%;align-items:center;justify-content:center;padding:16px}
+.card{background:var(--p);border-radius:16px;padding:24px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
+.err{color:#f87171;font-size:13px;min-height:16px}
+.lnk{background:none;color:var(--g);padding:4px}
+#app{display:flex;height:100%}
+#side{width:25%;min-width:300px;background:var(--p);display:flex;flex-direction:column;border-right:1px solid var(--b)}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg) radial-gradient(circle at 30% 20%,#1b2540,transparent 60%),radial-gradient(circle at 80% 90%,#2a1b3d,transparent 55%)}
+.top{display:flex;gap:8px;padding:10px;padding-top:max(10px,env(safe-area-inset-top))}
+#list{flex:1;overflow:auto}
+.row{display:flex;gap:10px;align-items:center;padding:10px 14px;cursor:pointer}
+.row:hover{background:var(--p2)}
+.row .n{font-weight:600}.row .s{color:var(--g);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row div{min-width:0}
+.av{width:44px;height:44px;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center;font-weight:700;object-fit:cover;flex:none}
+.empty{color:var(--g);text-align:center;padding:40px 16px}
+#ph{margin:auto;color:var(--g);background:#0006;padding:8px 16px;border-radius:20px}
+#chat{display:flex;flex-direction:column;height:100%}
+.head{display:flex;gap:8px;align-items:center;padding:10px;padding-top:max(10px,env(safe-area-inset-top))}
+.pill{flex:1;display:flex;gap:10px;align-items:center;background:var(--p);border-radius:16px;padding:6px 12px;cursor:pointer;min-width:0}
+#msgs{flex:1;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.m{max-width:75%;padding:8px 12px;border-radius:14px;background:var(--p2);align-self:flex-start;white-space:pre-wrap;word-break:break-word}
+.m.me{background:var(--a);align-self:flex-end}
+.m small{display:block;font-size:11px;opacity:.6;text-align:right}
+.send{display:flex;gap:8px;padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom));position:relative}
+#emo{position:absolute;bottom:62px;left:10px;background:var(--p);border:1px solid var(--b);border-radius:12px;padding:8px;display:flex;flex-wrap:wrap;gap:4px;max-width:260px}
+#emo span{font-size:22px;cursor:pointer;padding:2px}
+.mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.mod .card{align-items:stretch;max-height:92%;overflow:auto}
+.c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.c .av{width:96px;height:96px;font-size:36px}
+@media(max-width:800px){#side{width:100%;min-width:0}#main{position:fixed;inset:0;z-index:5}body:not(.open) #main{display:none}body.open #side{display:none}.mod{align-items:flex-end}}
+</style></head><body>
+
+<div id="auth"><div class="card">
+<h2 id="at">Вход</h2>
+<input id="lg" placeholder="Логин (a-z, 0-9, _)" autocapitalize="none" autocomplete="username">
+<input id="pw" type="password" placeholder="Пароль" autocomplete="current-password">
+<div class="err" id="ae"></div>
+<button id="ab">Войти</button>
+<button class="lnk" id="as">Нет аккаунта? Регистрация</button>
+</div></div>
+
+<div id="app" class="hide">
+<div id="side">
+ <div class="top"><input id="q" placeholder="Поиск по нику или @юзернейму"><button class="i" id="cfg" title="Настройки">⚙</button></div>
+ <div id="list"></div>
+</div>
+<div id="main"><div id="ph">Выберите чат</div><div id="chat" class="hide">
+ <div class="head"><button class="i" id="back" title="Закрыть чат">←</button><div class="pill" id="pill"></div></div>
+ <div id="msgs"></div>
+ <div class="send"><div id="emo" class="hide"></div><button class="i" id="eb">😊</button><input id="mi" placeholder="Сообщение" autocomplete="off"><button id="sb">➤</button></div>
+</div></div>
+</div>
+<div id="modal" class="mod hide"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// === НАСТРОЙКИ: вставь свои значения из Supabase (Project Settings -> API) ===
+const URL_='https://ВАШ-ПРОЕКТ.supabase.co', KEY='ВАШ_anon_public_КЛЮЧ';
+const DOM='@hlzchat.org';
+const sb=supabase.createClient(URL_,KEY);
+const $=i=>document.getElementById(i);
+let me,cur=null,chats={},msgs={},reg=false,ch;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ---------- сжатие на устройстве (до отправки) ----------
+const b64=u=>{let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s)};
+const unb=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function pipe(u,S){const r=new Response(new Blob([u]).stream().pipeThrough(new S('deflate-raw')));return new Uint8Array(await r.arrayBuffer())}
+async function pack(t){const u=new TextEncoder().encode(t);try{const z=await pipe(u,CompressionStream);if(z.length<u.length)return'd:'+b64(z)}catch(e){}return'r:'+b64(u)}
+async function unpack(s){const u=unb(s.slice(2));return new TextDecoder().decode(s[0]=='d'?await pipe(u,DecompressionStream):u)}
+function avImg(f,px){return new Promise((ok,no)=>{const i=new Image,r=new FileReader;r.onload=()=>{i.src=r.result};i.onload=()=>{const c=document.createElement('canvas');c.width=c.height=px;const x=c.getContext('2d'),m=Math.min(i.width,i.height);x.drawImage(i,(i.width-m)/2,(i.height-m)/2,m,m,0,0,px,px);ok(c.toDataURL('image/webp',.8))};i.onerror=no;r.readAsDataURL(f)})}
+
+// ---------- вход / регистрация ----------
+$('as').onclick=()=>{reg=!reg;$('at').textContent=reg?'Регистрация':'Вход';$('ab').textContent=reg?'Создать аккаунт':'Войти';$('as').textContent=reg?'Уже есть аккаунт? Войти':'Нет аккаунта? Регистрация';$('ae').textContent=''};
+$('ab').onclick=async()=>{
+ const l=$('lg').value.trim().toLowerCase(),p=$('pw').value,e=$('ae');e.textContent='';
+ if(!/^[a-z0-9_]{3,20}$/.test(l))return e.textContent='Логин: 3–20 символов a-z, 0-9, _';
+ if(p.length<6)return e.textContent='Пароль минимум 6 символов';
+ if(reg){
+  const r=await sb.auth.signUp({email:l+DOM,password:p});
+  if(r.error)return e.textContent=/already/i.test(r.error.message)?'Логин занят':r.error.message;
+  if(!r.data.session)return e.textContent='Отключи Confirm email в Supabase (Auth -> Providers -> Email)';
+  const q=await sb.from('profiles').insert({id:r.data.user.id,username:l,nick:l});
+  if(q.error){await sb.auth.signOut();return e.textContent='Логин занят'}
+ }else{
+  const r=await sb.auth.signInWithPassword({email:l+DOM,password:p});
+  if(r.error)return e.textContent='Неверный логин или пароль';
+ }
+ start();
+};
+async function start(){
+ const {data:{user}}=await sb.auth.getUser();if(!user)return;
+ const r=await sb.from('profiles').select('*').eq('id',user.id).single();
+ if(r.error)return;me=r.data;
+ $('auth').classList.add('hide');$('app').classList.remove('hide');
+ await load();
+ ch=sb.channel('m').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async p=>{
+  const m=p.new,pid=m.sender==me.id?m.receiver:m.sender;
+  if(!chats[pid]){const x=await sb.from('profiles').select('*').eq('id',pid).single();if(x.data)chats[pid]=x.data}
+  const a=msgs[pid]=msgs[pid]||[];
+  if(!a.some(z=>z.id==m.id)){m._t=null;a.push(m)}
+  list();if(cur&&cur.id==pid)draw();
+ }).subscribe();
+}
+async function load(){
+ const r=await sb.from('messages').select('*').or(`sender.eq.${me.id},receiver.eq.${me.id}`).order('created_at',{ascending:true}).limit(2000);
+ msgs={};(r.data||[]).forEach(m=>{const p=m.sender==me.id?m.receiver:m.sender;(msgs[p]=msgs[p]||[]).push(m)});
+ const ids=Object.keys(msgs);chats={};
+ if(ids.length){const x=await sb.from('profiles').select('*').in('id',ids);(x.data||[]).forEach(u=>chats[u.id]=u)}
+ list();
+}
+
+// ---------- список чатов и поиск ----------
+const ava=(u,s)=>u.avatar?`<img class="av" src="${u.avatar}">`:`<div class="av">${esc((u.nick||'?')[0].toUpperCase())}</div>`;
+function rows(a,sub){
+ $('list').innerHTML=a.length?'':'<div class="empty">Чатов нет</div>';
+ a.forEach(u=>{const d=document.createElement('div');d.className='row';d.innerHTML=ava(u)+`<div><div class="n">${esc(u.nick)}</div><div class="s">${sub(u)}</div></div>`;d.onclick=()=>open(u);$('list').append(d)});
+}
+function list(){
+ if($('q').value.trim())return;
+ const a=Object.values(chats).filter(u=>msgs[u.id]&&msgs[u.id].length).sort((x,y)=>msgs[y.id].at(-1).created_at.localeCompare(msgs[x.id].at(-1).created_at));
+ rows(a,u=>{const m=msgs[u.id].at(-1);return m._t==null?'…':esc(m._t.slice(0,60))});
+ a.forEach(async u=>{const m=msgs[u.id].at(-1);if(m._t==null){m._t=await unpack(m.body);list()}});
+}
+let st;$('q').oninput=()=>{clearTimeout(st);st=setTimeout(async()=>{
+ const t=$('q').value.trim().replace(/^@/,'').replace(/[%,()]/g,'');if(!t)return list();
+ const r=await sb.from('profiles').select('*').or(`username.ilike.%${t}%,nick.ilike.%${t}%`).neq('id',me.id).limit(15);
+ rows(r.data||[],u=>'@'+esc(u.username));
+},250)};
+
+// ---------- чат ----------
+function open(u){
+ cur=u;if(!chats[u.id])chats[u.id]=u;
+ $('q').value='';list();
+ $('ph').classList.add('hide');$('chat').classList.remove('hide');document.body.classList.add('open');
+ $('pill').innerHTML=ava(u)+`<b>${esc(u.nick)}</b>`;draw();$('mi').focus();
+}
+function close(){cur=null;$('chat').classList.add('hide');$('ph').classList.remove('hide');document.body.classList.remove('open')}
+$('back').onclick=close;
+async function draw(){
+ const a=msgs[cur.id]||[],box=$('msgs'),id=cur.id;
+ for(const m of a)if(m._t==null)m._t=await unpack(m.body);
+ if(!cur||cur.id!=id)return;
+ box.innerHTML='';
+ a.forEach(m=>{const d=document.createElement('div');d.className='m'+(m.sender==me.id?' me':'');
+  d.innerHTML=esc(m._t)+`<small>${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small>`;box.append(d)});
+ box.scrollTop=box.scrollHeight;
+}
+async function send(){
+ const t=$('mi').value.trim();if(!t||!cur)return;$('mi').value='';
+ const body=await pack(t); // сначала сжатие на устройстве, потом отправка в базу
+ const r=await sb.from('messages').insert({sender:me.id,receiver:cur.id,body}).select().single();
+ if(r.error){alert('Не отправлено: '+r.error.message);$('mi').value=t;return}
+ const m=r.data;m._t=t;const a=msgs[cur.id]=msgs[cur.id]||[];
+ if(!a.some(z=>z.id==m.id))a.push(m);else a.find(z=>z.id==m.id)._t=t;
+ draw();list();
+}
+$('sb').onclick=send;$('mi').onkeydown=e=>{if(e.key=='Enter')send()};
+'😀😂😍😎🥲😭😡👍👎🙏🔥❤️🎉🤔👀😴🤝💯✅❌😅🙈'.match(/\p{Extended_Pictographic}\uFE0F?/gu).forEach(e=>{const s=document.createElement('span');s.textContent=e;s.onclick=()=>{$('mi').value+=e;$('mi').focus()};$('emo').append(s)});
+$('eb').onclick=()=>$('emo').classList.toggle('hide');
+
+// ---------- профиль собеседника и настройки ----------
+const mod=h=>{const m=$('modal');m.innerHTML='<div class="card">'+h+'</div>';m.classList.remove('hide');m.onclick=e=>{if(e.target==m)m.classList.add('hide')};return m};
+$('pill').onclick=()=>{if(!cur)return;mod(`<div class="c">${ava(cur)}<b style="font-size:18px">${esc(cur.nick)}</b><span style="color:var(--g)">@${esc(cur.username)}</span></div>`)};
+$('cfg').onclick=()=>{
+ const m=mod(`<h3>Настройки</h3><div class="c" id="sa">${ava(me)}<button class="i" id="ch">Сменить аватарку</button></div>
+ <input id="sn" placeholder="Ник" value="${esc(me.nick)}"><input id="su" placeholder="Юзернейм" value="${esc(me.username)}">
+ <button id="sv">Сохранить профиль</button>
+ <hr style="border-color:var(--b);width:100%"><input id="op" type="password" placeholder="Текущий пароль"><input id="np" type="password" placeholder="Новый пароль (от 6)">
+ <button id="cp">Сменить пароль</button><div class="err" id="se"></div><button class="i" id="lo">Выйти</button>`);
+ const f=document.createElement('input');f.type='file';f.accept='image/*';let av=me.avatar;
+ $('ch').onclick=()=>f.click();
+ f.onchange=async()=>{if(f.files[0]){av=await avImg(f.files[0],128);$('sa').firstElementChild.outerHTML=ava({avatar:av,nick:me.nick})}};
+ $('sv').onclick=async()=>{
+  const u=$('su').value.trim().toLowerCase().replace(/^@/,''),n=$('sn').value.trim();
+  if(!/^[a-z0-9_]{3,20}$/.test(u)||!n)return $('se').textContent='Ник не пустой; юзернейм: a-z, 0-9, _ (3–20)';
+  const r=await sb.from('profiles').update({nick:n,username:u,avatar:av}).eq('id',me.id);
+  if(r.error)return $('se').textContent='Юзернейм занят';
+  Object.assign(me,{nick:n,username:u,avatar:av});$('se').style.color='#4ade80';$('se').textContent='Сохранено';
+ };
+ $('cp').onclick=async()=>{
+  $('se').style.color='';const np=$('np').value;if(np.length<6)return $('se').textContent='Новый пароль минимум 6 символов';
+  const {data:{user}}=await sb.auth.getUser();
+  const c=await sb.auth.signInWithPassword({email:user.email,password:$('op').value});
+  if(c.error)return $('se').textContent='Текущий пароль неверный';
+  const r=await sb.auth.updateUser({password:np});$('se').textContent=r.error?r.error.message:'Пароль изменён';
+ };
+ $('lo').onclick=async()=>{await sb.auth.signOut();location.reload()};
+};
+start();
+</script></body></html>
