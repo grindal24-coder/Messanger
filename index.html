@@ -51,18 +51,29 @@ button.i{background:var(--p2);padding:9px 12px}
 .aw{position:relative;display:inline-flex;flex:none}.dot{position:absolute;right:0;bottom:0;width:14px;height:14px;border-radius:50%;background:#3b82f6;border:2px solid var(--p);transform:translate(22%,22%)}.c .dot{width:20px;height:20px;border-width:3px}
 #pv{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:var(--p)}#pv div{position:relative;flex:none}#pv img{height:90px;border-radius:10px;display:block}#pv button{position:absolute;top:3px;right:3px;padding:0 7px;border-radius:50%;background:#000a}
 .ims{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}.ims img{max-width:100%;max-height:260px}
-#mic{touch-action:none;user-select:none;-webkit-user-select:none}#lk{position:absolute;right:10px;bottom:128px;background:var(--p2);border:1px solid var(--b);border-radius:22px;padding:12px 13px;font-size:20px}
+#mic{touch-action:none;user-select:none;-webkit-user-select:none}#lk{position:absolute;right:10px;bottom:70px;cursor:pointer;z-index:4;background:var(--p2);border:1px solid var(--b);border-radius:22px;padding:12px 13px;font-size:20px}
 #mic{position:relative;width:46px;min-height:40px;padding:0;overflow:hidden;transition:background .3s}#mic span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .35s,transform .35s}
 #mi2{opacity:0;transform:rotate(90deg) scale(.3)}#mic.v #mi1{opacity:0;transform:rotate(-90deg) scale(.3)}#mic.v #mi2{opacity:1;transform:none}
 #mic b{font-size:12px;white-space:nowrap}#mic.r{width:auto;min-width:64px;padding:0 10px;background:#dc2626}#mic.r span{display:none}#mic.s{background:var(--a)}
 .fb{position:absolute;right:10px;bottom:70px;width:48px;height:48px;border-radius:50%;padding:0;display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid var(--b)}
-#fl{width:auto;border-radius:22px;padding:0 14px;font-size:14px;height:40px}
-#cp{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;object-fit:cover;border:3px solid var(--a);background:#000;z-index:3}
+#fl{right:auto;left:calc(50% + 62px);bottom:82px;width:44px;height:44px;z-index:4}#pb{bottom:128px}
+#cpv{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;object-fit:cover;border:3px solid var(--a);background:#000;z-index:3}
 .ims video{max-width:100%;max-height:300px;border-radius:10px}.ims video.vc{width:220px;height:220px;max-height:none;border-radius:50%;object-fit:cover;cursor:pointer}
 #pv video{height:90px;border-radius:10px;display:block}.pg{display:flex;align-items:center;justify-content:center;height:90px;min-width:90px;background:var(--p2);border-radius:10px;padding:0 10px}
 #call{position:fixed;inset:0;z-index:30;background:linear-gradient(#10131a,#1b2540);display:flex;align-items:center;justify-content:center}
 .cc{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px}#cav .av{width:120px;height:120px;font-size:44px}#cn{font-size:22px}#cs{color:var(--g)}
 .cb{display:flex;gap:18px;margin-top:40px}.cb button{width:64px;height:64px;border-radius:50%;font-size:26px;padding:0}.cg{background:#16a34a!important}.cr{background:#dc2626!important;transform:rotate(135deg)}.cb .on{background:#fff;color:#000}
+#splash{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;transition:opacity .6s}
+#splash.out{opacity:0;pointer-events:none}#splash b{font-size:46px;letter-spacing:6px}.sp{width:30px;height:30px;border:3px solid var(--b);border-top-color:var(--a);border-radius:50%;animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
+#ed{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:20px;background:#0006}
+#em video{width:220px;height:220px;border-radius:50%;object-fit:cover}
+#tr{position:relative;height:44px;width:min(560px,86%);background:var(--p2);border-radius:10px;margin-top:8px}#sel{position:absolute;top:0;bottom:0;background:#3b82f655}
+.hd{position:absolute;top:-6px;width:18px;height:56px;margin-left:-9px;background:var(--a);border-radius:6px;touch-action:none;cursor:ew-resize}
+#phd{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#fff;pointer-events:none}.er{display:flex;gap:14px;align-items:center}
+.gr{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;overflow:auto}
+.t{aspect-ratio:1;background:var(--p2);border-radius:10px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:32px;cursor:pointer}
+.t small{font-size:12px;color:var(--g)}.t video{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}.ci{position:absolute;top:6px;right:6px;font-size:20px;text-shadow:0 0 4px #000}
+.m svg{vertical-align:-3px}
 .mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
 .mod .card{align-items:stretch;max-height:92%;overflow:auto}
 .c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -70,7 +81,8 @@ button.i{background:var(--p2);padding:9px 12px}
 @media(max-width:800px){#side{width:100%;min-width:0}#main{position:fixed;inset:0;z-index:5}body:not(.open) #main{display:none}body.open #side{display:none}.mod{align-items:flex-end}}
 </style></head><body>
 
-<div id="auth"><div class="card">
+<div id="splash"><b>HLZ</b><i class="sp"></i></div>
+<div id="auth" class="hide"><div class="card">
 <h2 id="at">Вход</h2>
 <input id="lg" placeholder="Логин (a-z, 0-9, _)" autocapitalize="none" autocomplete="username">
 <input id="pw" type="password" placeholder="Пароль" autocomplete="current-password">
@@ -81,20 +93,21 @@ button.i{background:var(--p2);padding:9px 12px}
 
 <div id="app" class="hide">
 <div id="side">
- <div class="top"><input id="q" placeholder="Поиск по нику или @юзернейму"><button class="i" id="cfg" title="Настройки">⚙</button></div>
+ <div class="top"><input id="q" placeholder="Поиск"><button class="i" id="cfg" title="Настройки">⚙</button></div>
  <div id="list"></div>
 </div>
 <div id="main"><div id="ph">Выберите чат</div><div id="chat" class="hide">
  <div class="head"><button class="i" id="back" title="Закрыть чат">←</button><div class="pill" id="pill"></div><button class="i" id="cl" title="Позвонить">📞</button></div>
  <div id="msgs"></div>
+ <div id="ed" class="hide"><div id="em"></div><div id="tr"><div id="sel"></div><div class="hd" id="hl"></div><div class="hd" id="hr"></div><div id="phd"></div></div><div class="er"><button class="i" id="ep">▶</button><span id="et"></span><button class="i" id="edel">🗑</button></div></div>
  <div id="pv" class="hide"></div>
  <div id="rb" class="hide"><span id="rt"></span><button class="lnk" id="rx">✕</button></div>
- <div class="send"><div id="emo" class="hide"></div><div id="lk" class="hide">🔒</div><button class="i fb hide" id="pb">⏸</button><button class="i fb hide" id="rs"></button><button class="i fb hide" id="fl">🔄 Селфи</button><video id="cp" class="hide" muted playsinline autoplay></video><button class="i" id="eb">😊</button><div class="w"><input id="mi" placeholder="Сообщение" autocomplete="off"><button class="lnk pl" id="pl">+</button></div><button id="sb">➤</button><button class="i" id="mic"><span id="mi1">🎤</span><span id="mi2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg></span><b id="tt"></b></button></div>
+ <div class="send"><div id="emo" class="hide"></div><div id="lk" class="hide">🔒</div><button class="i fb hide" id="pb">⏸</button><button class="i fb hide" id="rs"></button><button class="i fb hide" id="fl">🔄</button><video id="cpv" class="hide" muted playsinline autoplay></video><button class="i" id="eb">😊</button><div class="w"><input id="mi" placeholder="Сообщение" autocomplete="off"><button class="lnk pl" id="pl">+</button></div><button id="sb">➤</button><button class="i" id="mic"><span id="mi1">🎤</span><span id="mi2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg></span><b id="tt"></b></button></div>
 </div></div>
 </div>
 <div id="modal" class="mod hide"></div><div id="cm" class="hide"></div><div id="call" class="hide"><div class="cc"><div id="cav"></div><b id="cn"></b><span id="cs"></span><div class="cb" id="cb"></div></div></div><audio id="ra" autoplay></audio>
-<div id="sheet" class="hide"><div class="sh"><b>Отправить фото</b><div class="tiles"><button class="i" id="bg">🖼<br>Галерея</button><button class="i" id="bc">📷<br>Камера</button><button class="i" id="bv">🎞<br>Видео</button></div><small style="color:var(--g)">Фото сжимается на устройстве перед отправкой</small></div></div>
-<input type="file" id="fg" accept="image/*" multiple hidden><input type="file" id="fc" accept="image/*" capture="environment" hidden><input type="file" id="fv" accept="video/*" hidden>
+<div id="sheet" class="hide"><div class="sh"><div class="gr"><div class="t" id="tcam"><video id="cam" muted playsinline autoplay></video><span class="ci">📷</span></div><div class="t" id="tgal">🖼<small>Галерея</small></div></div></div></div>
+<input type="file" id="fg" accept="image/*,video/*" multiple hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -132,12 +145,15 @@ $('ab').onclick=async()=>{
  }
  start();
 };
+function splashOut(){$('splash').classList.add('out')}
+function noUser(){$('auth').classList.remove('hide');splashOut()}
+setTimeout(splashOut,8000);
 async function start(){
- const {data:{user}}=await sb.auth.getUser();if(!user)return;
+ const {data:{user}}=await sb.auth.getUser();if(!user){noUser();return}
  const r=await sb.from('profiles').select('*').eq('id',user.id).single();
- if(r.error)return;me=r.data;
+ if(r.error){noUser();return}me=r.data;
  $('auth').classList.add('hide');$('app').classList.remove('hide');
- await load();clean();presence();callInit();
+ await load();clean();presence();callInit();splashOut();
  ch=sb.channel('m').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async p=>{
   const m=p.new;if(!m||!m.id)return;const pid=m.sender==me.id?m.receiver:m.sender;
   if(p.eventType=='UPDATE'){const a=msgs[pid]||[],i=a.findIndex(z=>z.id==m.id);if(i<0)return;
@@ -191,7 +207,7 @@ async function draw(){
  if(!cur||cur.id!=id)return;
  box.innerHTML='';
  a.forEach(m=>{const d=document.createElement('div');d.className='m'+(m.sender==me.id?' me':'');d.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,m)};
-  const pm=parse(m._t),hm=pm.i||pm.a||pm.v||pm.c,q=m.reply_to&&a.find(z=>z.id==m.reply_to);d.innerHTML=(q?`<div class="q">${esc(prev(q._t||''))}</div>`:'')+(hm?'<div class="ims"></div>':'')+(pm.t?esc(pm.t):'')+`<small>${m.edited?'изм. · ':''}${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small>`;if(hm){const z=d.querySelector('.ims');(pm.i||[]).forEach(x=>media(z,'i',x));(pm.v||[]).forEach(x=>media(z,'v',x));if(pm.a)media(z,'a',pm.a);if(pm.c)media(z,'c',pm.c)}box.append(d)});
+  const pm=parse(m._t),hm=pm.i||pm.a||pm.v||pm.c,q=m.reply_to&&a.find(z=>z.id==m.reply_to);d.innerHTML=(q?`<div class="q">${esc(prev(q._t||''))}</div>`:'')+(hm?'<div class="ims"></div>':'')+(pm.t?esc(pm.t):'')+(pm.k?callTxt(m,pm.k):'')+`<small>${m.edited?'изм. · ':''}${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small>`;if(hm){const z=d.querySelector('.ims');(pm.i||[]).forEach(x=>media(z,'i',x));(pm.v||[]).forEach(x=>media(z,'v',x));if(pm.a)media(z,'a',pm.a);if(pm.c)media(z,'c',pm.c)}box.append(d)});
  box.scrollTop=box.scrollHeight;
 }
 async function push(body,t,T,rep){
@@ -222,11 +238,11 @@ async function send(){
 let ctx=null;
 function parse(t){if(t[0]=='\u0001'){try{return JSON.parse(t.slice(1))}catch(e){}}
  if(t.startsWith('m:i:'))return{i:[t.slice(4)]};if(t.startsWith('m:a:'))return{a:t.slice(4)};if(t.startsWith('m:c:'))return{c:t.slice(4)};return{t}}
-function prev(t){const p=parse(t);return (p.i?'📷 Фото'+(p.t?' '+p.t:''):p.v?'🎞 Видео':p.c?'⭕ Кружок':p.a?'🎤 Голосовое':p.t||'').slice(0,60)}
+function prev(t){const p=parse(t);return (p.k?'📞 Звонок':p.i?'📷 Фото'+(p.t?' '+p.t:''):p.v?'🎞 Видео':p.c?'⭕ Кружок':p.a?'🎤 Голосовое':p.t||'').slice(0,60)}
 function setCtx(c){ctx=c;$('rb').classList.toggle('hide',!c);if(c)$('rt').textContent=(c.k=='e'?'✏️ Изменение: ':'↩️ Ответ: ')+prev(c.m._t)}
 $('rx').onclick=()=>{if(ctx&&ctx.k=='e')$('mi').value='';setCtx(null)};
 function menu(x,y,m){
- const mine=m.sender==me.id,pm=parse(m._t),txt=!!pm.t,pure=!pm.i&&!pm.a&&!pm.v&&!pm.c,it=[['↩️','Ответить',()=>{setCtx({k:'r',m});$('mi').focus()}]];
+ const mine=m.sender==me.id,pm=parse(m._t),txt=!!pm.t,pure=!pm.i&&!pm.a&&!pm.v&&!pm.c&&!pm.k,it=[['↩️','Ответить',()=>{setCtx({k:'r',m});$('mi').focus()}]];
  if(mine&&pure)it.push(['✏️','Изменить',()=>{setCtx({k:'e',m});$('mi').value=m._t;$('mi').focus()}]);
  it.push(['➡️','Переслать',()=>fwd(m)]);
  if(txt)it.push(['📋','Копировать',()=>navigator.clipboard&&navigator.clipboard.writeText(pm.t)]);
@@ -293,8 +309,7 @@ async function addVideo(f){
  }}catch(e){const k=pend.indexOf(it);if(k>=0)pend.splice(k,1);showPv();alert(e.message);return}
  it.blob=b;it.url=URL.createObjectURL(b);showPv();
 }
-$('bv').onclick=()=>$('fv').click();
-$('fv').onchange=async e=>{$('sheet').classList.add('hide');const f=e.target.files[0];e.target.value='';if(f)await addVideo(f)};
+
 async function upload(blob,ext){const path=`${me.id}/${crypto.randomUUID()}.${ext}`;
  const u=await sb.storage.from('media').upload(path,blob,{contentType:blob.type});
  if(u.error){alert('Не загружено: '+u.error.message);return null}return path}
@@ -307,59 +322,108 @@ function media(d,k,path){
   el.src=u;if(k=='i'){el.onload=()=>{$('msgs').scrollTop=1e9};el.onclick=()=>mod(`<img src="${u}" style="width:100%;max-height:none">`)}
  }).catch(()=>{el.alt='не загрузилось'});
 }
-$('pl').onclick=()=>$('sheet').classList.remove('hide');
-$('sheet').onclick=e=>{if(e.target.id=='sheet')$('sheet').classList.add('hide')};
-$('bg').onclick=()=>$('fg').click();$('bc').onclick=()=>$('fc').click();
-['fg','fc'].forEach(i=>$(i).onchange=async e=>{
- $('sheet').classList.add('hide');
- for(const f of [...e.target.files]){const b=await toImg(f);pend.push({kind:'i',blob:b,url:URL.createObjectURL(b)})}showPv();
- e.target.value='';
-});
+let camS;
+async function sheetOpen(){$('sheet').classList.remove('hide');try{camS=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});$('cam').srcObject=camS}catch(e){}}
+function sheetClose(){$('sheet').classList.add('hide');camS&&camS.getTracks().forEach(t=>t.stop());camS=null;$('cam').srcObject=null}
+$('pl').onclick=sheetOpen;
+$('sheet').onclick=e=>{if(e.target.id=='sheet')sheetClose()};
+$('tgal').onclick=()=>$('fg').click();
+const addImg=async f=>{const b=await toImg(f);pend.push({kind:'i',blob:b,url:URL.createObjectURL(b)});showPv()};
+$('tcam').onclick=()=>{const v=$('cam');if(!camS||!v.videoWidth)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;
+ c.getContext('2d').drawImage(v,0,0);c.toBlob(addImg,'image/jpeg',.92)};
+$('fg').onchange=async e=>{const fs=[...e.target.files];e.target.value='';sheetClose();
+ for(const f of fs){if(f.type.startsWith('video'))await addVideo(f);else await addImg(f)}};
 const IC=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg>`;
-let mode='a',facing='user',R=null,held=false,starting=false,tdn=0,tw=0,tmr;
+let mode='a',facing='user',R=null,held=false,starting=false,tdn=0,tw=0,tmr,sx=0,ed=null;
 const flip=()=>mode=='a'?'c':'a';
+const mir=()=>{$('cpv').style.transform=facing=='user'?'translateX(-50%) scaleX(-1)':'translateX(-50%)'};
 function setMode(m){mode=m;$('mic').classList.toggle('v',m=='c');ui()}
 function ui(){
- const r=!!R,pz=r&&R.rec.state=='paused';
+ const r=!!R,pz=r&&R.rec.state=='paused',lk=r&&R.lock;
  $('mic').classList.toggle('r',r);$('mic').classList.toggle('s',pz);
- $('lk').classList.toggle('hide',!(held&&r&&!R.lock));
- $('pb').classList.toggle('hide',!(r&&!pz&&(held||R.lock)));
+ $('lk').classList.toggle('hide',!(r&&!pz&&(held||lk)));$('lk').textContent=lk?'🗑':'🔒';
+ $('pb').classList.toggle('hide',!(r&&!pz));
  $('rs').classList.toggle('hide',!pz);if(pz)$('rs').innerHTML=R.m=='c'?IC:'🎤';
- $('fl').classList.toggle('hide',mode!='c'||r);
- $('cp').classList.toggle('hide',!(r&&R.m=='c'));
+ const cam=r&&R.m=='c'&&!pz;$('fl').classList.toggle('hide',!cam);$('cpv').classList.toggle('hide',!cam);
  if(!r)$('tt').textContent='';
 }
-$('fl').onclick=()=>{facing=facing=='user'?'environment':'user';$('fl').textContent=facing=='user'?'🔄 Селфи':'🔄 Основная'};
 function tick(){if(!R)return;const r=R,e=r.acc+(r.rec.state=='recording'?Date.now()-r.seg:0);
  $('tt').textContent=r.rec.state=='paused'?'➤':(r.lock?'⏹ ':'🎙 ')+Math.round(e/1000)+'с';if(r.m=='c'&&e>=6e4)fin(true)}
 function fin(send){const r=R;if(!r||r.rec.state=='inactive')return;r.el=r.acc+(r.rec.state=='recording'?Date.now()-r.seg:0);r.disc=!send;r.rec.stop()}
-function pause(){if(R&&R.rec.state=='recording'){R.rec.pause();R.acc+=Date.now()-R.seg;ui();tick()}}
+// ----- редактор записи (после паузы): временная линия, обрезка, прослушивание -----
+const fmt1=ms=>fmt(ms);
+function fixDur(el,cb){el.onloadedmetadata=()=>{if(isFinite(el.duration))return cb();el.currentTime=1e101;el.ontimeupdate=()=>{el.ontimeupdate=null;el.currentTime=0;cb()}}}
+function drawEd(t){if(!ed)return;const p=x=>x/ed.dur*100+'%';$('sel').style.left=p(ed.a);$('sel').style.width=((ed.b-ed.a)/ed.dur*100)+'%';
+ $('hl').style.left=p(ed.a);$('hr').style.left=p(ed.b);$('phd').style.left=p(Math.min(Math.max(t??ed.el.currentTime*1000,ed.a),ed.b));$('et').textContent=fmt(ed.b-ed.a)}
+async function openEd(){
+ const r=R;r.rec.requestData();await new Promise(z=>setTimeout(z,150));if(R!==r||r.rec.state!='paused')return;
+ const vid=r.m=='c',b=new Blob(r.ch,{type:vid?'video/webm':'audio/webm'}),el=document.createElement(vid?'video':'audio'),url=URL.createObjectURL(b);
+ el.src=url;el.playsInline=true;ed={el,url,dur:r.acc,a:0,b:r.acc,r};r.trim={a:0,b:r.acc};
+ $('em').innerHTML='';if(vid)$('em').append(el);else $('em').innerHTML='<div style="font-size:72px">🎤</div>';
+ $('msgs').classList.add('hide');$('ed').classList.remove('hide');$('ep').textContent='▶';drawEd(0);
+ fixDur(el,()=>{el.currentTime=0});
+ el.ontimeupdate=()=>{const t=el.currentTime*1000;if(t>=ed.b-30){el.pause();$('ep').textContent='▶'}drawEd(t)};
+ el.onclick=()=>$('ep').click();
+}
+function closeEd(){if(!ed)return;ed.el.pause();URL.revokeObjectURL(ed.url);ed=null;$('ed').classList.add('hide');$('msgs').classList.remove('hide')}
+['hl','hr'].forEach(id=>{const h=$(id);h.onpointerdown=e=>{h.setPointerCapture(e.pointerId);e.preventDefault()};
+ h.onpointermove=e=>{if(!ed||!h.hasPointerCapture(e.pointerId))return;
+  const rc=$('tr').getBoundingClientRect(),t=Math.max(0,Math.min(1,(e.clientX-rc.left)/rc.width))*ed.dur,g=Math.min(1000,ed.dur);
+  if(id=='hl')ed.a=Math.min(t,ed.b-g);else ed.b=Math.max(t,ed.a+g);ed.r.trim={a:ed.a,b:ed.b};
+  ed.el.pause();$('ep').textContent='▶';ed.el.currentTime=(id=='hl'?ed.a:ed.b)/1000;drawEd()}});
+$('ep').onclick=()=>{if(!ed)return;const el=ed.el;
+ if(el.paused){const t=el.currentTime*1000;if(t<ed.a||t>=ed.b-50)el.currentTime=ed.a/1000;el.play();$('ep').textContent='⏸'}else{el.pause();$('ep').textContent='▶'}};
+$('edel').onclick=()=>fin(false);
+// обрезка: проигрываем выбранный отрезок и перекодируем (идёт в реальном времени)
+function trimBlob(b,vid,a,e){return new Promise(ok=>{
+ const el=document.createElement(vid?'video':'audio');el.src=URL.createObjectURL(b);el.playsInline=true;
+ fixDur(el,()=>{el.currentTime=a/1000;el.onseeked=()=>{el.onseeked=null;
+  const AC=new AudioContext(),dst=AC.createMediaStreamDestination();AC.createMediaElementSource(el).connect(dst);
+  const tr=[...(vid?el.captureStream().getVideoTracks():[]),...dst.stream.getAudioTracks()];
+  const mt=(vid?['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']:['audio/webm;codecs=opus']).find(t=>MediaRecorder.isTypeSupported(t));
+  const r=new MediaRecorder(new MediaStream(tr),{mimeType:mt,videoBitsPerSecond:450000,audioBitsPerSecond:vid?24000:12000}),ch=[];
+  r.ondataavailable=x=>ch.push(x.data);r.onstop=()=>{AC.close();ok(new Blob(ch,{type:b.type}))};
+  r.start();AC.resume().then(()=>el.play());
+  const iv=setInterval(()=>{if(el.currentTime*1000>=e||el.ended){clearInterval(iv);el.pause();r.stop()}},40);
+ }})})}
+function pause(){if(R&&R.rec.state=='recording'){R.lock=true;R.lockAt=R.lockAt||Date.now();R.rec.pause();R.acc+=Date.now()-R.seg;ui();tick();openEd()}}
 $('pb').onclick=pause;
-$('rs').onclick=()=>{if(R&&R.rec.state=='paused'){R.rec.resume();R.seg=Date.now();ui();tick()}};
+$('rs').onclick=()=>{if(R&&R.rec.state=='paused'){closeEd();R.trim=null;R.rec.resume();R.seg=Date.now();ui();tick()}};
+$('lk').onclick=()=>{if(R&&R.lock&&Date.now()-R.lockAt>500)fin(false)}; // отмена (после замка — с задержкой 0,5 с)
+$('fl').onclick=async()=>{if(!R||R.m!='c')return;facing=facing=='user'?'environment':'user';
+ try{const ns=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:384},height:{ideal:384}}});
+  R.vs.getVideoTracks().forEach(t=>t.stop());R.vs=ns;$('cpv').srcObject=ns;mir()}catch(e){facing=facing=='user'?'environment':'user'}};
 async function begin(){
  starting=true;const m=mode,to=cur,au={channelCount:1,echoCancellation:true,noiseSuppression:true};let st;
- try{st=await navigator.mediaDevices.getUserMedia(m=='c'?{audio:au,video:{facingMode:facing,width:{ideal:384},height:{ideal:384},aspectRatio:1,frameRate:{ideal:24}}}:{audio:au})}
+ try{st=await navigator.mediaDevices.getUserMedia(m=='c'?{audio:au,video:{facingMode:facing,width:{ideal:384},height:{ideal:384},frameRate:{ideal:24}}}:{audio:au})}
  catch(e){starting=false;held=false;ui();return alert('Нет доступа к '+(m=='c'?'камере или микрофону':'микрофону'))}
+ const r={m,to,ch:[],acc:0,seg:Date.now(),lock:false,lockAt:0,disc:false,el:0,vs:st,run:true};let rs=st;
+ if(m=='c'){ // пишем через canvas 384×384: так камеру можно переключать прямо во время записи
+  const v=$('cpv'),cv=document.createElement('canvas'),x=cv.getContext('2d');cv.width=cv.height=384;v.srcObject=st;mir();
+  const dr=()=>{if(!r.run)return;const w=v.videoWidth,h=v.videoHeight;if(w){const q=Math.min(w,h);x.drawImage(v,(w-q)/2,(h-q)/2,q,q,0,0,384,384)}requestAnimationFrame(dr)};dr();
+  rs=new MediaStream([cv.captureStream(24).getVideoTracks()[0],...st.getAudioTracks()]);
+ }
  const mt=(m=='c'?['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']:['audio/webm;codecs=opus']).find(t=>MediaRecorder.isTypeSupported(t));
- const rec=new MediaRecorder(st,m=='c'?{mimeType:mt,videoBitsPerSecond:450000,audioBitsPerSecond:24000}:{mimeType:mt,audioBitsPerSecond:12000});
- const r=R={rec,m,to,ch:[],acc:0,seg:Date.now(),lock:false,disc:false,el:0};
+ const rec=r.rec=new MediaRecorder(rs,m=='c'?{mimeType:mt,videoBitsPerSecond:450000,audioBitsPerSecond:24000}:{mimeType:mt,audioBitsPerSecond:12000});
  rec.ondataavailable=e=>r.ch.push(e.data);
- rec.onstop=()=>{clearInterval(tmr);st.getTracks().forEach(t=>t.stop());$('cp').srcObject=null;
-  const b=new Blob(r.ch,{type:m=='c'?'video/webm':'audio/webm'});R=null;ui();
-  if(!r.disc&&r.el>=1000&&r.to)sendMedia(m=='c'?'c':'a',b,'webm',r.to)};
- if(m=='c'){$('cp').srcObject=st;$('cp').style.transform=facing=='user'?'translateX(-50%) scaleX(-1)':'translateX(-50%)'}
- rec.start(1000);starting=false;tmr=setInterval(tick,300);ui();tick();
+ rec.onstop=async()=>{clearInterval(tmr);r.run=false;closeEd();[st,r.vs].forEach(x=>x&&x.getTracks().forEach(t=>t.stop()));$('cpv').srcObject=null;
+  let b=new Blob(r.ch,{type:m=='c'?'video/webm':'audio/webm'}),len=r.el;const T=r.trim;R=null;ui();
+  if(r.disc)return;
+  if(T&&(T.a>80||T.b<r.el-80)){len=T.b-T.a;if(len>=1000)b=await trimBlob(b,m=='c',T.a,T.b)}
+  if(len>=1000&&r.to)sendMedia(m=='c'?'c':'a',b,'webm',r.to)};
+ R=r;rec.start(1000);starting=false;tmr=setInterval(tick,300);ui();tick();
  if(!held&&!r.lock){setMode(flip());fin(false)}
 }
 $('mic').oncontextmenu=e=>e.preventDefault();
-$('mic').onpointerdown=e=>{ // тап — смена режима (голос/кружок); зажатие — запись; вверх на 🔒 — замок, на ⏸ — пауза
+$('mic').onpointerdown=e=>{ // тап — режим голос/кружок; зажатие — запись; вверх на 🔒 — замок; влево — отмена; ⏸ — пауза (нажатием)
  e.preventDefault();
  if(R){if(R.lock||R.rec.state=='paused')fin(true);return}
  if(!cur||starting)return;
- held=true;tdn=Date.now();$('mic').setPointerCapture(e.pointerId);tw=setTimeout(begin,200);
+ held=true;tdn=Date.now();sx=e.clientX;$('mic').setPointerCapture(e.pointerId);tw=setTimeout(begin,200);
 };
-$('mic').onpointermove=e=>{if(!held||!R||R.lock)return;const z=document.elementFromPoint(e.clientX,e.clientY),h=z&&z.closest('#lk,#pb');
- if(!h)return;R.lock=true;if(h.id=='pb')pause();else ui()};
+$('mic').onpointermove=e=>{if(!held||!R||R.lock)return;
+ if(sx-e.clientX>90){held=false;fin(false);return}
+ const z=document.elementFromPoint(e.clientX,e.clientY);if(z&&z.closest('#lk')){R.lock=true;R.lockAt=Date.now();ui()}};
 $('mic').onpointerup=$('mic').onpointercancel=()=>{
  if(!held)return;held=false;clearTimeout(tw);
  if(!R&&!starting){setMode(flip());return}
@@ -376,24 +440,29 @@ $('cfg').onclick=()=>{
  const m=mod(`<h3>Настройки</h3><div class="c" id="sa">${ava(me)}<button class="i" id="ch">Сменить аватарку</button></div>
  <input id="sn" placeholder="Ник" value="${esc(me.nick)}"><input id="su" placeholder="Юзернейм" value="${esc(me.username)}">
  <button id="sv">Сохранить профиль</button>
- <hr style="border-color:var(--b);width:100%"><input id="op" type="password" placeholder="Текущий пароль"><input id="np" type="password" placeholder="Новый пароль (от 6)">
- <button id="cp">Сменить пароль</button><div class="err" id="se"></div><button id="lo" style="background:#dc2626">Выйти</button>`);
+ <hr style="border-color:var(--b);width:100%"><input id="op" type="password" placeholder="Текущий пароль"><input id="np" type="password" placeholder="Новый пароль (от 6)"><input id="np2" type="password" placeholder="Повторите новый пароль">
+ <button id="cpw">Сменить пароль</button><div class="err" id="se"></div><button id="lo" style="background:#dc2626">Выйти</button>`);
  const f=document.createElement('input');f.type='file';f.accept='image/*';let av=me.avatar;
  $('ch').onclick=()=>f.click();
  f.onchange=async()=>{if(f.files[0]){av=await avImg(f.files[0],128);$('sa').firstElementChild.outerHTML=ava({avatar:av,nick:me.nick})}};
  $('sv').onclick=async()=>{
-  const u=$('su').value.trim().toLowerCase().replace(/^@/,''),n=$('sn').value.trim();
+  $('se').style.color='#f87171';const u=$('su').value.trim().toLowerCase().replace(/^@/,''),n=$('sn').value.trim();
   if(!/^[a-z0-9_]{3,20}$/.test(u)||!n)return $('se').textContent='Ник не пустой; юзернейм: a-z, 0-9, _ (3–20)';
   const r=await sb.from('profiles').update({nick:n,username:u,avatar:av}).eq('id',me.id);
   if(r.error)return $('se').textContent='Юзернейм занят';
   Object.assign(me,{nick:n,username:u,avatar:av});$('se').style.color='#4ade80';$('se').textContent='Сохранено';
  };
- $('cp').onclick=async()=>{
-  $('se').style.color='';const np=$('np').value;if(np.length<6)return $('se').textContent='Новый пароль минимум 6 символов';
+ $('cpw').onclick=async()=>{
+  const e=$('se'),bad=t=>{e.style.color='#f87171';e.textContent=t};
+  if(!$('op').value)return bad('Введите текущий пароль');
+  if($('np').value.length<6)return bad('Новый пароль минимум 6 символов');
+  if($('np').value!=$('np2').value)return bad('Новые пароли не совпадают');
   const {data:{user}}=await sb.auth.getUser();
   const c=await sb.auth.signInWithPassword({email:user.email,password:$('op').value});
-  if(c.error)return $('se').textContent='Текущий пароль неверный';
-  const r=await sb.auth.updateUser({password:np});$('se').textContent=r.error?r.error.message:'Пароль изменён';
+  if(c.error)return bad('Текущий пароль неверный');
+  const r=await sb.auth.updateUser({password:$('np').value});
+  if(r.error)return bad(r.error.message);
+  e.style.color='#4ade80';e.textContent='Пароль изменён';$('op').value=$('np').value=$('np2').value='';
  };
  $('lo').onclick=()=>{const m=mod('<h3>Выйти из аккаунта?</h3><button id="y" style="background:#dc2626">Выйти</button><button id="n" style="background:#3a3f4b">Отмена</button>');
   $('y').onclick=async()=>{await sb.auth.signOut();location.reload()};$('n').onclick=()=>m.classList.add('hide')};
@@ -412,7 +481,7 @@ function mkPc(){
  const c=C,pc=c.pc=new RTCPeerConnection(ICE);
  c.st.getTracks().forEach(t=>pc.addTrack(t,c.st));
  pc.onicecandidate=e=>e.candidate&&sg(c.u,'ice',e.candidate.toJSON());
- pc.ontrack=e=>{$('ra').srcObject=e.streams[0]};
+ pc.ontrack=e=>{$('ra').srcObject=e.streams[0];$('ra').play().catch(()=>{})};
  pc.oniceconnectionstatechange=()=>{const x=pc.iceConnectionState;
   if(x=='connected'||x=='completed'){if(!c.live){c.live=1;c.t0=Date.now();stopRing()}if(C===c)callUi()}
   else if(x=='failed'&&C===c){callEnd(true);alert('Не удалось соединиться. Для мобильного интернета нужен TURN-сервер')}};
@@ -426,12 +495,12 @@ async function callStart(u){
  c.to=setTimeout(()=>{if(C===c&&!c.live){callEnd(true);alert('Нет ответа')}},45000);callUi();
 }
 async function callAcc(){
- const c=C;if(!c)return;let st;try{st=await mic()}catch(e){callEnd(true);return alert('Нет доступа к микрофону')}
+ const c=C;if(!c)return;stopRing();let st;try{st=await mic()}catch(e){callEnd(true);return alert('Нет доступа к микрофону')}
  c.st=st;c.acc=1;stopRing();mkPc();await c.pc.setRemoteDescription(c.offer);await flushQ(c);
- const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);sg(c.u,'answer',{sdp:a});callUi();
+ const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);sg(c.u,'answer',{sdp:a});connTo(c);callUi();
 }
 function callEnd(notify){
- const c=C;if(!c)return;C=null;clearTimeout(c.to);stopRing();if(notify)sg(c.u,'end');
+ const c=C;if(!c)return;C=null;clearTimeout(c.to);clearTimeout(c.ct);stopRing();if(notify)sg(c.u,'end');if(c.role=='out')logCall(c);
  c.pc&&c.pc.close();c.st&&c.st.getTracks().forEach(t=>t.stop());$('ra').srcObject=null;$('call').classList.add('hide');
 }
 async function onSig(p){
@@ -443,13 +512,13 @@ async function onSig(p){
   c.to=setTimeout(()=>{if(C===c&&!c.acc)callEnd(false)},45000);return;
  }
  if(!C||C.u.id!=p.from)return;
- if(p.t=='answer'&&C.role=='out'){await C.pc.setRemoteDescription(p.d.sdp);await flushQ(C)}
+ if(p.t=='answer'&&C.role=='out'){await C.pc.setRemoteDescription(p.d.sdp);await flushQ(C);connTo(C)}
  else if(p.t=='ice'){if(C.pc&&C.pc.remoteDescription)try{await C.pc.addIceCandidate(p.d)}catch(e){}else C.q.push(p.d)}
  else if(p.t=='end'||p.t=='busy'){const b=p.t=='busy';callEnd(false);if(b)alert('Занято')}
 }
 function callUi(){
  const c=C;if(!c)return $('call').classList.add('hide');
- $('call').classList.remove('hide');$('cav').innerHTML=ava(c.u);$('cn').textContent=c.u.nick;
+ if(c.acc||c.live)stopRing();$('call').classList.remove('hide');$('cav').innerHTML=ava(c.u);$('cn').textContent=c.u.nick;
  $('cs').textContent=c.live?fmt(Date.now()-c.t0):c.role=='in'&&!c.acc?'Входящий звонок…':c.role=='out'&&!c.pc.remoteDescription?'Вызов…':'Соединение…';
  const b=$('cb');b.innerHTML='';
  const add=(ic,fn,cl)=>{const x=document.createElement('button');x.className=cl;x.textContent=ic;x.onclick=fn;b.append(x)};
@@ -460,10 +529,15 @@ function callUi(){
   add('📞',()=>callEnd(true),'cr');
  }
 }
-function ringStart(){stopRing();const A=ring=new AudioContext();A.resume();
- const beep=()=>{const o=A.createOscillator(),g=A.createGain();o.frequency.value=440;g.gain.value=.15;o.connect(g);g.connect(A.destination);o.start();o.stop(A.currentTime+.4);navigator.vibrate&&navigator.vibrate([400,200,400])};
- beep();A.iv=setInterval(beep,1500)}
-function stopRing(){if(ring){clearInterval(ring.iv);ring.close();ring=null}}
+let ringIv=0,ringAC=null;
+function ringStart(){stopRing();const A=ringAC=new AudioContext();A.resume();
+ const beep=()=>{if(A.state!='running')return;const o=A.createOscillator(),g=A.createGain();o.frequency.value=440;g.gain.value=.15;o.connect(g);g.connect(A.destination);o.start();o.stop(A.currentTime+.4);navigator.vibrate&&navigator.vibrate([400,200,400])};
+ beep();ringIv=setInterval(beep,1500)}
+function stopRing(){clearInterval(ringIv);ringIv=0;if(ringAC){ringAC.close().catch(()=>{});ringAC=null}navigator.vibrate&&navigator.vibrate(0)}
+const PH=c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="${c}"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.6 3.6a1 1 0 0 1-.25 1z"/></svg>`;
+function callTxt(m,k){const n=esc(m.sender==me.id?me.nick:cur.nick);return PH(k.ok?'#4ade80':'#9ca3af')+' <b>'+n+'</b> звонил'+(k.ok?'<br>Звонок продлился '+fmt(k.d):'')}
+async function logCall(c){const j='\u0001'+JSON.stringify({k:{ok:c.live?1:0,d:c.live?Date.now()-c.t0:0}});await push(await pack(j),j,c.u)}
+const connTo=c=>{c.ct=setTimeout(()=>{if(C===c&&!c.live){callEnd(true);alert('Связь не установилась. Для мобильного интернета нужен TURN-сервер')}},20000)};
 $('cl').onclick=()=>{if(cur)callStart(cur)};
 addEventListener('beforeunload',()=>{if(C)callEnd(true)});
 function presence(){ // «в сети»: пока приложение открыто
