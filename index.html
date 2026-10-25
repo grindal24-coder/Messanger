@@ -74,6 +74,10 @@ button.i{background:var(--p2);padding:9px 12px}
 .t{aspect-ratio:1;background:var(--p2);border-radius:10px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:32px;cursor:pointer}
 .t small{font-size:12px;color:var(--g)}.t video{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}.ci{position:absolute;top:6px;right:6px;font-size:20px;text-shadow:0 0 4px #000}
 .m svg{vertical-align:-3px}
+#rv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+#lv{position:absolute;top:16px;right:16px;width:110px;height:150px;object-fit:cover;border-radius:12px;z-index:3;border:2px solid #fff4;background:#000}
+.cc{position:relative;z-index:2}#call.vo .cc{height:100%;justify-content:flex-end;text-shadow:0 1px 6px #000}#call.vo #cav{display:none}
+.cb{flex-wrap:wrap;justify-content:center;max-width:320px}.cb button{width:56px!important;height:56px!important;font-size:22px!important}
 .mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
 .mod .card{align-items:stretch;max-height:92%;overflow:auto}
 .c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -105,7 +109,7 @@ button.i{background:var(--p2);padding:9px 12px}
  <div class="send"><div id="emo" class="hide"></div><div id="lk" class="hide">🔒</div><button class="i fb hide" id="pb">⏸</button><button class="i fb hide" id="rs"></button><button class="i fb hide" id="fl">🔄</button><video id="cpv" class="hide" muted playsinline autoplay></video><button class="i" id="eb">😊</button><div class="w"><input id="mi" placeholder="Сообщение" autocomplete="off"><button class="lnk pl" id="pl">+</button></div><button id="sb">➤</button><button class="i" id="mic"><span id="mi1">🎤</span><span id="mi2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M10 8.5v7l6-3.5z" fill="currentColor"/></svg></span><b id="tt"></b></button></div>
 </div></div>
 </div>
-<div id="modal" class="mod hide"></div><div id="cm" class="hide"></div><div id="call" class="hide"><div class="cc"><div id="cav"></div><b id="cn"></b><span id="cs"></span><div class="cb" id="cb"></div></div></div><audio id="ra" autoplay></audio>
+<div id="modal" class="mod hide"></div><div id="cm" class="hide"></div><div id="call" class="hide"><video id="rv" class="hide" muted playsinline autoplay></video><video id="lv" class="hide" muted playsinline autoplay></video><div class="cc"><div id="cav"></div><b id="cn"></b><span id="cs"></span><div class="cb" id="cb"></div></div></div><audio id="ra" autoplay></audio>
 <div id="sheet" class="hide"><div class="sh"><div class="gr"><div class="t" id="tcam"><video id="cam" muted playsinline autoplay></video><span class="ci">📷</span></div><div class="t" id="tgal">🖼<small>Галерея</small></div></div></div></div>
 <input type="file" id="fg" accept="image/*,video/*" multiple hidden>
 
@@ -481,16 +485,17 @@ function mkPc(){
  const c=C,pc=c.pc=new RTCPeerConnection(ICE);
  c.st.getTracks().forEach(t=>pc.addTrack(t,c.st));
  pc.onicecandidate=e=>e.candidate&&sg(c.u,'ice',e.candidate.toJSON());
- pc.ontrack=e=>{$('ra').srcObject=e.streams[0];$('ra').play().catch(()=>{})};
+ pc.ontrack=e=>{const m=e.streams[0];$('ra').srcObject=m;$('rv').srcObject=m;$('ra').play().catch(()=>{});e.track.onmute=e.track.onunmute=updRv;updRv()};
+ pc.onnegotiationneeded=async()=>{if(!c.live||pc.signalingState!='stable')return;try{const o=await pc.createOffer();await pc.setLocalDescription(o);sg(c.u,'offer',{sdp:o})}catch(e){}};
  pc.oniceconnectionstatechange=()=>{const x=pc.iceConnectionState;
-  if(x=='connected'||x=='completed'){if(!c.live){c.live=1;c.t0=Date.now();stopRing()}if(C===c)callUi()}
+  if(x=='connected'||x=='completed'){if(!c.live){c.live=1;c.t0=Date.now();stopRing();if(c.want){const k=c.want;c.want=null;setVideo(k)}}if(C===c)callUi()}
   else if(x=='failed'&&C===c){callEnd(true);alert('Не удалось соединиться. Для мобильного интернета нужен TURN-сервер')}};
 }
 async function flushQ(c){for(const x of c.q)try{await c.pc.addIceCandidate(x)}catch(e){}c.q=[]}
-async function callStart(u){
+async function callStart(u,k){
  if(C)return;if(!on.has(u.id))return alert(u.nick+' сейчас не в сети');
  let st;try{st=await mic()}catch(e){return alert('Нет доступа к микрофону')}
- const c=C={u,st,q:[],role:'out'};mkPc();
+ const c=C={u,st,q:[],role:'out',want:k};mkPc();
  const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);sg(u,'offer',{sdp:o});
  c.to=setTimeout(()=>{if(C===c&&!c.live){callEnd(true);alert('Нет ответа')}},45000);callUi();
 }
@@ -501,24 +506,25 @@ async function callAcc(){
 }
 function callEnd(notify){
  const c=C;if(!c)return;C=null;clearTimeout(c.to);clearTimeout(c.ct);stopRing();if(notify)sg(c.u,'end');if(c.role=='out')logCall(c);
- c.pc&&c.pc.close();c.st&&c.st.getTracks().forEach(t=>t.stop());$('ra').srcObject=null;$('call').classList.add('hide');
+ c.pc&&c.pc.close();c.st&&c.st.getTracks().forEach(t=>t.stop());c.vtr&&c.vtr.stop();$('ra').srcObject=null;$('rv').srcObject=null;$('rv').classList.add('hide');$('lv').classList.add('hide');$('call').classList.remove('vo');$('call').classList.add('hide');
 }
 async function onSig(p){
  if(!p||p.to!=me.id)return;
  if(p.t=='offer'){
+  if(C&&C.u.id==p.from&&C.live)return reneg(p);
   if(C)return sg(p.from,'busy');
   const u=chats[p.from]||(await sb.from('profiles').select('*').eq('id',p.from).single()).data;if(!u||C)return;
   const c=C={u,q:[],role:'in',offer:p.d.sdp};ringStart();callUi();
   c.to=setTimeout(()=>{if(C===c&&!c.acc)callEnd(false)},45000);return;
  }
  if(!C||C.u.id!=p.from)return;
- if(p.t=='answer'&&C.role=='out'){await C.pc.setRemoteDescription(p.d.sdp);await flushQ(C);connTo(C)}
+ if(p.t=='answer'){if(!C.pc||C.pc.signalingState!='have-local-offer')return;await C.pc.setRemoteDescription(p.d.sdp);await flushQ(C);if(!C.live)connTo(C)}
  else if(p.t=='ice'){if(C.pc&&C.pc.remoteDescription)try{await C.pc.addIceCandidate(p.d)}catch(e){}else C.q.push(p.d)}
  else if(p.t=='end'||p.t=='busy'){const b=p.t=='busy';callEnd(false);if(b)alert('Занято')}
 }
 function callUi(){
  const c=C;if(!c)return $('call').classList.add('hide');
- if(c.acc||c.live)stopRing();$('call').classList.remove('hide');$('cav').innerHTML=ava(c.u);$('cn').textContent=c.u.nick;
+ if(c.acc||c.live)stopRing();$('call').classList.remove('hide');$('cav').innerHTML=ava(c.u);$('cn').textContent=c.u.nick;updRv();
  $('cs').textContent=c.live?fmt(Date.now()-c.t0):c.role=='in'&&!c.acc?'Входящий звонок…':c.role=='out'&&!c.pc.remoteDescription?'Вызов…':'Соединение…';
  const b=$('cb');b.innerHTML='';
  const add=(ic,fn,cl)=>{const x=document.createElement('button');x.className=cl;x.textContent=ic;x.onclick=fn;b.append(x)};
@@ -526,6 +532,12 @@ function callUi(){
  else{
   add(c.mute?'🔇':'🎤',()=>{c.mute=!c.mute;c.st.getAudioTracks().forEach(t=>t.enabled=!c.mute);callUi()},c.mute?'on':'i');
   add(c.deaf?'🔕':'🎧',()=>{c.deaf=!c.deaf;$('ra').muted=c.deaf;callUi()},c.deaf?'on':'i');
+  if(c.live){
+   const cam=c.vk&&c.vk!='screen';
+   add('📹',()=>setVideo(cam?null:c.fp||'user'),cam?'on':'i');
+   if(cam)add('🔄',()=>{c.fp=c.fp=='environment'?'user':'environment';setVideo(c.fp)},'i');
+   if(navigator.mediaDevices.getDisplayMedia)add('🖥',()=>setVideo(c.vk=='screen'?null:'screen'),c.vk=='screen'?'on':'i');
+  }
   add('📞',()=>callEnd(true),'cr');
  }
 }
@@ -538,7 +550,27 @@ const PH=c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="${c}"><path d
 function callTxt(m,k){const n=esc(m.sender==me.id?me.nick:cur.nick);return PH(k.ok?'#4ade80':'#9ca3af')+' <b>'+n+'</b> звонил'+(k.ok?'<br>Звонок продлился '+fmt(k.d):'')}
 async function logCall(c){const j='\u0001'+JSON.stringify({k:{ok:c.live?1:0,d:c.live?Date.now()-c.t0:0}});await push(await pack(j),j,c.u)}
 const connTo=c=>{c.ct=setTimeout(()=>{if(C===c&&!c.live){callEnd(true);alert('Связь не установилась. Для мобильного интернета нужен TURN-сервер')}},20000)};
-$('cl').onclick=()=>{if(cur)callStart(cur)};
+// видео в звонке: камера / показ экрана (добавляется «на лету», со встречной переговоркой)
+function updRv(){const m=$('rv').srcObject,on=!!m&&m.getVideoTracks().some(t=>t.readyState=='live'&&!t.muted);$('rv').classList.toggle('hide',!on);$('call').classList.toggle('vo',on)}
+function locV(){const c=C,v=$('lv');if(c&&c.vtr){v.srcObject=new MediaStream([c.vtr]);v.style.transform=c.vk=='user'?'scaleX(-1)':'';v.classList.remove('hide')}else{v.srcObject=null;v.classList.add('hide')}}
+async function setVideo(kind){ // 'user' | 'environment' | 'screen' | null
+ const c=C;if(!c||!c.live)return;
+ if(c.vtr){c.vtr.stop();c.vtr=null}
+ if(!kind){if(c.vsend){c.pc.removeTrack(c.vsend);c.vsend=null}c.vk=null;callUi();locV();return}
+ let st;
+ try{st=kind=='screen'?await navigator.mediaDevices.getDisplayMedia({video:true}):await navigator.mediaDevices.getUserMedia({video:{facingMode:kind,width:{ideal:640},height:{ideal:480},frameRate:{ideal:24}}})}
+ catch(e){c.vk=null;callUi();locV();return alert(kind=='screen'?'Не удалось начать показ экрана':'Нет доступа к камере')}
+ const t=c.vtr=st.getVideoTracks()[0];if(kind!='screen')c.fp=kind;else t.contentHint='detail';
+ t.onended=()=>{if(C===c&&c.vtr===t)setVideo(null)}; // системная кнопка «остановить показ»
+ if(c.vsend)await c.vsend.replaceTrack(t);else c.vsend=c.pc.addTrack(t,c.st);
+ try{const sp=c.vsend.getParameters();sp.encodings=sp.encodings&&sp.encodings.length?sp.encodings:[{}];sp.encodings[0].maxBitrate=kind=='screen'?1500000:700000;await c.vsend.setParameters(sp)}catch(e){}
+ c.vk=kind;callUi();locV();
+}
+async function reneg(p){const c=C,pc=c.pc;
+ if(pc.signalingState!='stable'&&c.role=='out')return; // при одновременных предложениях уступает принявший
+ await pc.setRemoteDescription(p.d.sdp);const a=await pc.createAnswer();await pc.setLocalDescription(a);sg(c.u,'answer',{sdp:a})}
+$('cl').onclick=()=>{if(!cur||C)return;const u=cur,m=mod(`<h3>Позвонить: ${esc(u.nick)}</h3><button id="k0" class="i">🎤 Голосовой</button><button id="k1" class="i">🤳 С фронтальной камерой</button><button id="k2" class="i">📷 С основной камерой</button>`);
+ const go=k=>{m.classList.add('hide');callStart(u,k)};$('k0').onclick=()=>go(null);$('k1').onclick=()=>go('user');$('k2').onclick=()=>go('environment')};
 addEventListener('beforeunload',()=>{if(C)callEnd(true)});
 function presence(){ // «в сети»: пока приложение открыто
  const pc=sb.channel('online',{config:{presence:{key:me.id}}});
