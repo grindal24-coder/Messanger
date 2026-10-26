@@ -106,6 +106,7 @@ button.i{background:var(--p2);padding:9px 12px}
 .cl{position:absolute;right:14px;top:10px;font-size:22px;z-index:2}
 .sr2{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0}.sr2 div{display:flex;flex-direction:column}.sr2 span{color:var(--g);font-size:12px}.rb{background:#3a3f4b;padding:7px 12px}
 .lnkbox{display:flex;align-items:center;gap:8px;background:var(--p2);border-radius:12px;padding:6px 6px 6px 12px;width:100%}.lnkbox .lt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9db4ff}.lnkbox button{background:#2b303b;border-radius:9px;padding:7px 12px;flex:none}
+.ls{color:var(--g);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.ls.on{color:#60a5fa}.pill b{white-space:nowrap;max-width:55%;overflow:hidden;text-overflow:ellipsis;flex:none}
 .mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .mod .card{align-items:stretch;max-height:92%;overflow:auto}
 .c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -235,7 +236,7 @@ function open(u){
  cur=u;setCtx(null);pend.length=0;showPv();if(!chats[u.id])chats[u.id]=u;
  $('q').value='';list();
  $('ph').classList.add('hide');$('chat').classList.remove('hide');document.body.classList.add('open');
- $('pill').innerHTML=ava(u)+`<b>${esc(u.nick)}</b>`;draw();$('mi').focus();
+ pillUpd();refreshSeen(u).then(pillUpd);draw();$('mi').focus();
 }
 function close(){cur=null;$('chat').classList.add('hide');$('ph').classList.remove('hide');document.body.classList.remove('open')}
 $('back').onclick=close;
@@ -538,6 +539,17 @@ function editProfile(){let av=me.avatar;
   const r=await sb.from('profiles').update({nick:n,username:u,avatar:av}).eq('id',me.id);if(r.error)return $('ee').textContent='Юзернейм занят';
   Object.assign(me,{nick:n,username:u,avatar:av});barUpdate();m.classList.add('hide')};
 }
+// --- «был(а) в сети» ---
+const plu=(n,a,b,c)=>{const m=n%10,h=n%100;return n+' '+(m==1&&h!=11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c)};
+function seenTxt(u){if(!u||u.isG)return'';if(on.has(u.id))return'в сети';if(!u.last_seen)return'был(а) в сети давно';
+ const m=Math.floor((Date.now()-Date.parse(u.last_seen))/6e4);
+ if(m<1)return'был(а) в сети только что';if(m<60)return'был(а) в сети '+plu(m,'минуту','минуты','минут')+' назад';
+ if(m<1440){const h=Math.floor(m/60);return h==1?'был(а) в сети час назад':'был(а) в сети '+plu(h,'час','часа','часов')+' назад'}
+ const t=new Date(u.last_seen),y=t.getFullYear()!=new Date().getFullYear()?{year:'numeric'}:{};
+ return'был(а) в сети '+t.toLocaleDateString('ru',{day:'numeric',month:'long',...y})+' в '+t.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'})}
+async function refreshSeen(u){if(!u||u.isG)return;const r=await sb.from('profiles').select('last_seen').eq('id',u.id).single();if(r.data)u.last_seen=r.data.last_seen}
+function pillUpd(){if(cur)$('pill').innerHTML=ava(cur)+`<b>${esc(cur.nick)}</b>`+(cur.isG?'':`<span class="ls${on.has(cur.id)?' on':''}">${seenTxt(cur)}</span>`)}
+setInterval(()=>{if(cur&&!cur.isG)refreshSeen(cur).then(pillUpd)},30000);
 // --- устройства (активные сеансы) ---
 let _dv;function getDev(){if(_dv)return _dv;const k='hlz_dev_'+me.id;try{_dv=localStorage.getItem(k);if(!_dv){_dv=crypto.randomUUID();localStorage.setItem(k,_dv)}}catch(e){_dv=_dv||crypto.randomUUID()}return _dv}
 function devName(){const u=navigator.userAgent,b=/YaBrowser/.test(u)?'Яндекс Браузер':/Edg\//.test(u)?'Edge':/OPR\//.test(u)?'Opera':/Firefox/.test(u)?'Firefox':/Chrome/.test(u)?'Chrome':/Safari/.test(u)?'Safari':'Браузер',
@@ -545,6 +557,7 @@ function devName(){const u=navigator.userAgent,b=/YaBrowser/.test(u)?'Яндек
 async function devBeat(){if(!me)return;
  const r=await sb.from('devices').select('revoked').eq('id',getDev()).maybeSingle();
  if(r.data&&r.data.revoked){await sb.from('devices').delete().eq('id',getDev());await sb.auth.signOut();location.reload();return} // сеанс отключён с другого устройства
+ sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',me.id).then(()=>{});
  await sb.from('devices').upsert({id:getDev(),user_id:me.id,name:devName(),seen_at:new Date().toISOString()},{onConflict:'id'})}
 const liveDev=cols=>sb.from('devices').select(cols,{count:'exact'}).eq('revoked',false).gt('seen_at',new Date(Date.now()-30*864e5).toISOString());
 async function cnt(){const r=await liveDev('id');if($('scnt'))$('scnt').textContent=r.count??'—'}
@@ -607,15 +620,15 @@ async function loadGroups(){
  const r=await sb.from('groups').select('*,group_members(user_id,profiles(*))');if(r.error)return;const ids=new Set();
  (r.data||[]).forEach(g=>{ids.add(g.id);chats[g.id]=Object.assign(chats[g.id]||{},{id:g.id,nick:g.name,isG:1,owner:g.owner,created_at:g.created_at,mem:g.group_members.map(x=>x.profiles).filter(Boolean)})});
  Object.keys(chats).forEach(k=>{if(chats[k].isG&&!ids.has(k)){delete chats[k];if(cur&&cur.id==k)close()}});
- list();if(cur&&cur.isG)$('pill').innerHTML=ava(cur)+`<b>${esc(cur.nick)}</b>`;
+ list();if(cur&&cur.isG)pillUpd();
 }
 async function join(g){
  const r=await sb.from('group_members').insert({group_id:g,user_id:me.id});if(r.error)return alert('Не удалось вступить (приглашение отозвано?)');
  await sb.from('invites').delete().eq('group_id',g).eq('user_id',me.id);await loadGroups();if(chats[g])open(chats[g]);
 }
 function usrInfo(u,full){
- const m=mod(`${u.id==me.id?'':'<button class="lnk dots" id="dt">⋮</button>'}<div class="c">${ava(u)}<b style="font-size:18px">${esc(u.nick)}</b><span style="color:var(--g)">@${esc(u.username)}</span></div>`);
- if(u.id==me.id)return;const bl=prefs[u.id]&&prefs[u.id].blocked;
+ const m=mod(`${u.id==me.id?'':'<button class="lnk dots" id="dt">⋮</button>'}<div class="c">${ava(u)}<b style="font-size:18px">${esc(u.nick)}</b><span style="color:var(--g)">@${esc(u.username)}</span>${u.id==me.id?'':`<span id="usn" style="color:var(--g);font-size:13px">${seenTxt(u)}</span>`}</div>`);
+ if(u.id==me.id)return;refreshSeen(u).then(()=>{const e=$('usn');if(e)e.textContent=seenTxt(u)});const bl=prefs[u.id]&&prefs[u.id].blocked;
  $('dt').onclick=e=>{e.stopPropagation();const r=e.target.getBoundingClientRect();
   pop(r.left-170,r.bottom,[['🚫',bl?'Разблокировать':'Заблокировать',()=>setPref(u.id,{blocked:!bl}),1],
    ...(full?[['🗑️','Удалить чат (только у меня)',()=>ask('Удалить чат у себя?','Удалить',()=>{setPref(u.id,{hidden_at:new Date().toISOString()});close()},'У собеседника он останется.')]]:[])])};
@@ -780,7 +793,7 @@ addEventListener('beforeunload',()=>{if(C)callEnd(true)});
 function presence(){ // «в сети»: пока приложение открыто
  const pc=sb.channel('online',{config:{presence:{key:me.id}}});
  pc.on('presence',{event:'sync'},()=>{on.clear();Object.keys(pc.presenceState()).forEach(k=>on.add(k));list();
-  if(cur)$('pill').innerHTML=ava(cur)+`<b>${esc(cur.nick)}</b>`}).subscribe(async st=>{if(st=='SUBSCRIBED')await pc.track({t:Date.now()})});
+  if(cur)pillUpd()}).subscribe(async st=>{if(st=='SUBSCRIBED')await pc.track({t:Date.now()})});
 }
 start();
 </script></body></html>
