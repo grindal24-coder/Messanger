@@ -129,6 +129,7 @@ button.i{background:var(--p2);padding:9px 12px}
 .m.cm .ims{margin:0}.m.cm .q{margin:0 0 4px;padding:6px 10px;background:var(--p2);border-radius:12px}
 #modal2{z-index:42}
 .dlb{display:block;text-align:center;background:var(--a);border-radius:10px;padding:11px;color:#fff;text-decoration:none}
+.vwc{width:100%;height:32px;cursor:pointer;display:block;touch-action:none}
 .mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .mod .card{align-items:stretch;max-height:92%;overflow:auto}
 .c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -354,11 +355,11 @@ function showPv(){const v=$('pv');v.innerHTML='';v.classList.toggle('hide',!pend
 // ---------- сжатие видео на устройстве: уменьшение размера кадра + битрейт, VP9/Opus (идёт в реальном времени) ----------
 const LIMV=8*1048576; // лимит видео 8 МБ
 // Способ 1 — логика Rotato (FFmpeg: H.264, постоянное качество, разрешение не меняется); дальше — прежнее сжатие и максимальное
-const PR=[{n:'Качество как у Rotato',w:1920,bpp:.05,min:4e5,max:6e6,ab:96000,fps:30},{n:'Сильнее',w:720,vb:9e5,ab:48000,fps:30},{n:'Максимум',w:360,vb:18e4,ab:20000,fps:15}];
+const PR=[{n:'Качество как у Rotato',w:1920,bpp:.025,min:3e5,max:3.5e6,ab:64000,fps:30},{n:'Сильнее',w:720,vb:9e5,ab:48000,fps:30},{n:'Максимум',w:360,vb:18e4,ab:20000,fps:15}];
 const VM=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus'];
 const ev2=x=>Math.max(2,Math.round(x/2)*2);
 function vdim(P,m){const k=Math.min(1,P.w/Math.max(m.w,m.h)),w=ev2(m.w*k),h=ev2(m.h*k);return{w,h,vb:P.vb||Math.round(Math.min(P.max,Math.max(P.min,w*h*P.fps*P.bpp)))}}
-const vpred=(P,m)=>(vdim(P,m).vb+P.ab)*m.d/8*1.1; // ожидаемый вес файла
+const vpred=(P,m)=>(vdim(P,m).vb+P.ab)*m.d/8*1.15; // ожидаемый вес файла
 function vmeta(f){return new Promise((ok,no)=>{const v=document.createElement('video'),bad=()=>no(new Error('Не удалось прочитать видео'));v.preload='metadata';v.src=URL.createObjectURL(f);
  v.onloadedmetadata=()=>{const m={w:v.videoWidth,h:v.videoHeight,d:v.duration};URL.revokeObjectURL(v.src);isFinite(m.d)&&m.w?ok(m):bad()};v.onerror=bad})}
 function cvid(f,P,m,onp){return new Promise((ok,no)=>{
@@ -668,16 +669,29 @@ const ap={},PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',PAUS
 const tf=x=>{x=Math.round(x||0);return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')};
 const plg=()=>{try{return JSON.parse(localStorage.getItem('hlz_played')||'[]')}catch(e){return[]}};
 const played=q=>plg().includes(q),markPlayed=q=>{try{const a=plg();if(!a.includes(q)){a.push(q);localStorage.setItem('hlz_played',JSON.stringify(a.slice(-500)))}}catch(e){}};
+const DAC=()=>DAC.c||(DAC.c=new(window.AudioContext||window.webkitAudioContext)());
+async function peaksOf(url){ // громкость дорожки: 200 значений от 0 до 1
+ try{const buf=await DAC().decodeAudioData(await (await fetch(url)).arrayBuffer()),ch=buf.getChannelData(0),N=200,out=new Array(N).fill(0),st=Math.max(1,Math.floor(ch.length/N));
+  for(let i=0;i<N;i++){let q=0,c=0;for(let j=i*st;j<Math.min(ch.length,(i+1)*st);j+=8){q+=ch[j]*ch[j];c++}out[i]=c?Math.sqrt(q/c):0}
+  const srt=[...out].sort((a,b)=>a-b),ref=srt[Math.floor(N*.95)]||1e-6;return out.map(v=>{v=Math.min(1,v/ref);return v<.08?0:v})}catch(e){return null}}
 function voice(d,path,mine){
  const w=document.createElement('div');w.className='vp';
- w.innerHTML=`<button class="vpb">${PLAY}</button><div class="vpc"><div class="vwv"><i></i></div><div class="vpt"><span>00:00</span>${mine||played(path)?'':'<b class="vdot"></b>'}</div></div>`;d.append(w);
- const btn=w.querySelector('.vpb'),bar=w.querySelector('.vwv'),fill=bar.firstChild,tx=w.querySelector('.vpt span'),au=ap[path]||(ap[path]=new Audio());
- const show=()=>{const t=au._d||0;fill.style.width=t?(au.currentTime/t*100)+'%':'0';tx.textContent=tf(au.paused&&au.currentTime==0?t:au.currentTime);btn.innerHTML=au.paused?PLAY:PAUSE};
+ w.innerHTML=`<button class="vpb">${PLAY}</button><div class="vpc"><canvas class="vwc"></canvas><div class="vpt"><span>00:00</span>${mine||played(path)?'':'<b class="vdot"></b>'}</div></div>`;d.append(w);
+ const btn=w.querySelector('.vpb'),cv=w.querySelector('.vwc'),tx=w.querySelector('.vpt span'),au=ap[path]||(ap[path]=new Audio());
+ const paint=()=>{const W=cv.clientWidth,H=cv.clientHeight;if(!W)return;const dpr=devicePixelRatio||1;if(cv.width!=Math.round(W*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+  const n=Math.max(8,Math.floor((W+3)/7)),gap=(W-n*4)/(n-1),pk=au._pk,prog=au._d?au.currentTime/au._d:0; // вся дорожка всегда вмещается по ширине
+  for(let i=0;i<n;i++){let v=0;if(pk){const a=Math.floor(i*pk.length/n),b=Math.max(a+1,Math.floor((i+1)*pk.length/n));for(let j=a;j<b;j++)v=Math.max(v,pk[j])}
+   const bh=4+v*(H-4);x.fillStyle=(i+.5)/n<=prog?'#fff':'rgba(255,255,255,.45)';x.beginPath();const px=i*(4+gap),py=(H-bh)/2;x.roundRect?x.roundRect(px,py,4,bh,2):x.rect(px,py,4,bh);x.fill()}};
+ const show=()=>{const t=au._d||0;tx.textContent=tf(au.paused&&au.currentTime==0?t:au.currentTime);btn.innerHTML=au.paused?PLAY:PAUSE;paint()};
+ const sk=e=>{const r=cv.getBoundingClientRect();if(au._d){au.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*au._d;show()}};
  const bind=()=>{au.ontimeupdate=show;au.onplay=()=>{show();markPlayed(path);const dt=w.querySelector('.vdot');if(dt)dt.remove()};au.onpause=show;au.onended=()=>{au.currentTime=0;show()};
-  btn.onclick=()=>au.paused?au.play():au.pause();bar.onclick=e=>{const r=bar.getBoundingClientRect();if(au._d)au.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*au._d}};
- if(au.src&&au._d!==undefined){bind();show();return}
+  btn.onclick=()=>au.paused?au.play():au.pause();cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);sk(e)};cv.onpointermove=e=>{if(e.buttons)sk(e)}};
+ requestAnimationFrame(paint);
+ if(au.src&&au._d!==undefined){bind();show();if(au._pkp)au._pkp.then(pk=>{au._pk=pk;paint()});return}
  (cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data))).then(u=>{
-  fixDur(au,()=>{au._d=au.duration;au.currentTime=0;bind();show()});au.src=u}).catch(()=>{tx.textContent='ошибка'})}
+  fixDur(au,()=>{au._d=au.duration;au.currentTime=0;bind();show()});au.src=u;
+  au._pkp=peaksOf(u);au._pkp.then(pk=>{au._pk=pk;paint()})}).catch(()=>{tx.textContent='ошибка'})}
 // --- скачивание медиа из сообщения ---
 const mimeExt=q=>q.split('.').pop()||'bin';
 async function saveMedia(path,name){const u=await(cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data)));
@@ -686,13 +700,17 @@ async function dlMsg(pm){const L=[...(pm.i||[]).map(q=>[q,'фото']),...(pm.v|
  for(const [q,t] of L){try{await saveMedia(q,`hlz-${t}-${Date.now()}-${++n}.${mimeExt(q)}`)}catch(e){alert('Не скачалось')}await new Promise(r=>setTimeout(r,300))}}
 // --- кружок: лимит 5 МБ (480p → 360p → прежнее сжатие с лимитом 10 МБ) ---
 const LIMC=5*1048576,LIMC3=10*1048576;
+function bigCircle(b){ // лимит превышен: показываем вес лучшего качества и даём скачать
+ const m=mod(`<h3>Лимит превышен</h3><div style="color:var(--g)">Кружок в лучшем качестве весит ${sz(b.size)}, а в чат влезает не больше 5 МБ.</div><button id="bcd">⬇ Скачать</button><button id="bcn" style="background:#3a3f4b">Отмена</button>`);
+ $('bcd').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hlz-кружок.'+(b.type.includes('mp4')?'mp4':'webm');document.body.append(a);a.click();a.remove();m.classList.add('hide')};
+ $('bcn').onclick=()=>m.classList.add('hide')}
 async function fitCircle(b,len){
  if(b.size<=LIMC)return b;
  const D=len/1000,m={w:480,h:480,d:D};
  for(const t of [{w:480,fps:30,ab:32000,lo:75e4,hi:2e6},{w:360,fps:30,ab:32000,lo:35e4,hi:7e5},{w:384,fps:24,ab:24000,lo:45e4,hi:45e4,lim:LIMC3}]){
   const lim=t.lim||LIMC,fit=Math.floor(lim*8*.88/D-t.ab);if(fit<t.lo)continue;
   const r=await cvid(b,{w:t.w,fps:t.fps,vb:Math.min(t.hi,fit),ab:t.ab},m);if(r.size<=lim)return r}
- alert('Кружок слишком тяжёлый для отправки даже при максимальном сжатии. Отправка отменена.');return null}
+ bigCircle(b);return null}
 // --- «был(а) в сети» ---
 const plu=(n,a,b,c)=>{const m=n%10,h=n%100;return n+' '+(m==1&&h!=11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c)};
 function seenTxt(u){if(!u||u.isG)return'';if(on.has(u.id))return'в сети';if(!u.last_seen)return'был(а) в сети давно';
