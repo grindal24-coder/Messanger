@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>HLZ Chat</title>
+<title>HLZ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HLZ">
 <style>
 :root{--bg:#0f1115;--p:#171a21;--p2:#1f232c;--t:#fff;--g:#8b93a1;--a:#3b82f6;--b:#2a2f3a}
 *{box-sizing:border-box;margin:0}
@@ -532,10 +539,10 @@ const mod=(h,id)=>{const m=$(id||'modal');m.innerHTML='<div class="card">'+h+'</
 $('pill').onclick=()=>{if(cur)cur.isG?grpInfo():usrInfo(cur,1)};
 $('cfg').onclick=()=>{
  const m=mod(`<h3>Настройки</h3><div class="c">${ava(me,1)}<b>${esc(me.nick)}</b><span style="color:var(--g)">@${esc(me.username)}</span></div>
-  <button id="sv">✏️ Редактировать профиль</button><div class="sr"><b>Уведомления</b><button class="tg" id="ntm"></button></div>
+  <button id="sv">✏️ Редактировать профиль</button><div class="sr"><b>Уведомления</b><button class="tg" id="ntm"></button></div><div class="sr"><b>Приложение</b><button class="i" id="instm">Установить</button></div>
  <hr style="border-color:var(--b);width:100%"><input id="op" type="password" placeholder="Текущий пароль"><input id="np" type="password" placeholder="Новый пароль (от 6)"><input id="np2" type="password" placeholder="Повторите новый пароль">
  <button id="cpw">Сменить пароль</button><div class="err" id="se"></div><button id="lo" style="background:#dc2626">Выйти</button>`);
- ntgl($('ntm'));$('sv').onclick=()=>editProfile();
+ ntgl($('ntm'));instBtn($('instm'));$('sv').onclick=()=>editProfile();
  $('cpw').onclick=async()=>{
   const e=$('se'),bad=t=>{e.style.color='#f87171';e.textContent=t};
   if(!$('op').value)return bad('Введите текущий пароль');
@@ -670,28 +677,30 @@ const tf=x=>{x=Math.round(x||0);return String(Math.floor(x/60)).padStart(2,'0')+
 const plg=()=>{try{return JSON.parse(localStorage.getItem('hlz_played')||'[]')}catch(e){return[]}};
 const played=q=>plg().includes(q),markPlayed=q=>{try{const a=plg();if(!a.includes(q)){a.push(q);localStorage.setItem('hlz_played',JSON.stringify(a.slice(-500)))}}catch(e){}};
 const DAC=()=>DAC.c||(DAC.c=new(window.AudioContext||window.webkitAudioContext)());
-async function peaksOf(url){ // громкость дорожки: 200 значений от 0 до 1
+async function peaksOf(url){ // громкость дорожки (200 значений от 0 до 1) и настоящая длительность
  try{const buf=await DAC().decodeAudioData(await (await fetch(url)).arrayBuffer()),ch=buf.getChannelData(0),N=200,out=new Array(N).fill(0),st=Math.max(1,Math.floor(ch.length/N));
   for(let i=0;i<N;i++){let q=0,c=0;for(let j=i*st;j<Math.min(ch.length,(i+1)*st);j+=8){q+=ch[j]*ch[j];c++}out[i]=c?Math.sqrt(q/c):0}
-  const srt=[...out].sort((a,b)=>a-b),ref=srt[Math.floor(N*.95)]||1e-6;return out.map(v=>{v=Math.min(1,v/ref);return v<.08?0:v})}catch(e){return null}}
+  const srt=[...out].sort((a,b)=>a-b),ref=srt[Math.floor(N*.95)]||1e-6;return{pk:out.map(v=>{v=Math.min(1,v/ref);return v<.08?0:v}),dur:buf.duration}}catch(e){return null}}
 function voice(d,path,mine){
  const w=document.createElement('div');w.className='vp';
  w.innerHTML=`<button class="vpb">${PLAY}</button><div class="vpc"><canvas class="vwc"></canvas><div class="vpt"><span>00:00</span>${mine||played(path)?'':'<b class="vdot"></b>'}</div></div>`;d.append(w);
  const btn=w.querySelector('.vpb'),cv=w.querySelector('.vwc'),tx=w.querySelector('.vpt span'),au=ap[path]||(ap[path]=new Audio());
  const paint=()=>{const W=cv.clientWidth,H=cv.clientHeight;if(!W)return;const dpr=devicePixelRatio||1;if(cv.width!=Math.round(W*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
   const x=cv.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
-  const n=Math.max(8,Math.floor((W+3)/7)),gap=(W-n*4)/(n-1),pk=au._pk,prog=au._d?au.currentTime/au._d:0; // вся дорожка всегда вмещается по ширине
+  const n=Math.max(8,Math.floor((W+3)/7)),gap=(W-n*4)/(n-1),pk=au._pk,prog=au._d?Math.min(1,au.currentTime/au._d):0; // вся дорожка всегда вмещается по ширине
   for(let i=0;i<n;i++){let v=0;if(pk){const a=Math.floor(i*pk.length/n),b=Math.max(a+1,Math.floor((i+1)*pk.length/n));for(let j=a;j<b;j++)v=Math.max(v,pk[j])}
    const bh=4+v*(H-4);x.fillStyle=(i+.5)/n<=prog?'#fff':'rgba(255,255,255,.45)';x.beginPath();const px=i*(4+gap),py=(H-bh)/2;x.roundRect?x.roundRect(px,py,4,bh,2):x.rect(px,py,4,bh);x.fill()}};
- const show=()=>{const t=au._d||0;tx.textContent=tf(au.paused&&au.currentTime==0?t:au.currentTime);btn.innerHTML=au.paused?PLAY:PAUSE;paint()};
- const sk=e=>{const r=cv.getBoundingClientRect();if(au._d){au.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*au._d;show()}};
- const bind=()=>{au.ontimeupdate=show;au.onplay=()=>{show();markPlayed(path);const dt=w.querySelector('.vdot');if(dt)dt.remove()};au.onpause=show;au.onended=()=>{au.currentTime=0;show()};
-  btn.onclick=()=>au.paused?au.play():au.pause();cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);sk(e)};cv.onpointermove=e=>{if(e.buttons)sk(e)}};
+ const upd=()=>{const t=au._d||0;tx.textContent=tf(au.paused&&au.currentTime==0?t:au.currentTime);paint()};
+ const show=()=>{btn.innerHTML=au.paused?PLAY:PAUSE;upd()};
+ const loop=()=>{if(au.paused||!w.isConnected)return;upd();requestAnimationFrame(loop)}; // плавное закрашивание дорожки
+ const sk=e=>{const r=cv.getBoundingClientRect();if(au._d){au.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*au._d;upd()}};
+ const bind=()=>{au.ontimeupdate=upd;au.onplay=()=>{show();markPlayed(path);const dt=w.querySelector('.vdot');if(dt)dt.remove();loop()};au.onpause=show;au.onended=()=>{au.currentTime=0;show()};
+  btn.onclick=()=>au.paused?au.play():au.pause();cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);sk(e)};cv.onpointermove=e=>{if(e.buttons)sk(e)};if(!au.paused)loop()};
  requestAnimationFrame(paint);
- if(au.src&&au._d!==undefined){bind();show();if(au._pkp)au._pkp.then(pk=>{au._pk=pk;paint()});return}
+ if(au.src&&au._d!==undefined){bind();show();if(au._pkp)au._pkp.then(r=>{if(r)au._pk=r.pk;paint()});return}
  (cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data))).then(u=>{
-  fixDur(au,()=>{au._d=au.duration;au.currentTime=0;bind();show()});au.src=u;
-  au._pkp=peaksOf(u);au._pkp.then(pk=>{au._pk=pk;paint()})}).catch(()=>{tx.textContent='ошибка'})}
+  fixDur(au,async()=>{const r=await au._pkp;au._pk=r&&r.pk;au._d=r?r.dur:(isFinite(au.duration)&&au.duration<3600?au.duration:0);au.currentTime=0;bind();show()});
+  au.src=u;au._pkp=peaksOf(u)}).catch(()=>{tx.textContent='ошибка'})}
 // --- скачивание медиа из сообщения ---
 const mimeExt=q=>q.split('.').pop()||'bin';
 async function saveMedia(path,name){const u=await(cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data)));
@@ -711,6 +720,10 @@ async function fitCircle(b,len){
   const lim=t.lim||LIMC,fit=Math.floor(lim*8*.88/D-t.ab);if(fit<t.lo)continue;
   const r=await cvid(b,{w:t.w,fps:t.fps,vb:Math.min(t.hi,fit),ab:t.ab},m);if(r.size<=lim)return r}
  bigCircle(b);return null}
+// --- установка как приложение (PWA) ---
+let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});addEventListener('appinstalled',()=>{ip=null});
+function instBtn(b){if(!b)return;if(matchMedia('(display-mode: standalone)').matches){b.textContent='Установлено';b.disabled=true;return}
+ b.onclick=async()=>{if(ip){ip.prompt();try{await ip.userChoice}catch(e){}ip=null}else alert('Откройте меню браузера (⋮) и выберите «Установить приложение» или «Добавить на главный экран». На iPhone: «Поделиться» → «На экран Домой».')}}
 // --- «был(а) в сети» ---
 const plu=(n,a,b,c)=>{const m=n%10,h=n%100;return n+' '+(m==1&&h!=11?a:m>=2&&m<=4&&(h<10||h>=20)?b:c)};
 function seenTxt(u){if(!u||u.isG)return'';if(on.has(u.id))return'в сети';if(!u.last_seen)return'был(а) в сети давно';
@@ -756,11 +769,11 @@ function openSettings(){
  const st=$('st');
  st.innerHTML=`<div class="setp"><button class="lnk cl" id="stc">✕</button><div class="sn2"><div class="ni on">👤 <span>Учётная запись</span></div><div class="nj on" data-s="s1">Информация об учётной записи</div><div class="nj" data-s="s2">Пароль и безопасность</div><div class="ni" data-s="s3" style="cursor:pointer">🔔 <span>Уведомления</span></div><div class="nx"></div><div class="ni red" id="sx">🚪 <span>Выйти</span></div></div>
  <div class="sc"><h2 id="s1">Информация об учётной записи</h2><div class="sr"><b>Имя пользователя</b><span>${esc(me.username)}</span></div><hr style="border:0;border-top:1px solid #2a2f3a">
- <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке).</div></div></div>`;
+ <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке).</div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s4">Приложение</h2><div class="sr"><b>Установить HLZ как приложение</b><button class="i" id="inst">Установить</button></div></div></div>`;
  st.classList.remove('hide');cnt();
  st.onclick=e=>{if(e.target==st)closeSt()};$('stc').onclick=closeSt;
  st.querySelectorAll('.nj').forEach(n=>n.onclick=()=>{st.querySelectorAll('.nj').forEach(x=>x.classList.toggle('on',x==n));$(n.dataset.s).scrollIntoView({behavior:'smooth'})});
- ntgl($('ntp'));st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
+ ntgl($('ntp'));instBtn($('inst'));st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
  $('sx').onclick=()=>ask('Выйти из аккаунта?','Выйти',async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}await sb.auth.signOut();location.reload()});
 }
 $('bgear').onclick=openSettings;
