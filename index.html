@@ -184,6 +184,7 @@ const URL_='https://rhznlpfnzyoawcmbuppz.supabase.co', KEY='eyJhbGciOiJIUzI1NiIs
 const DOM='@hlzchat.org';
 const sb=supabase.createClient(URL_,KEY);
 const $=i=>document.getElementById(i);
+let pendOpen=(location.hash.match(/#c=([0-9a-f-]{36})/)||[])[1];
 let pendJoin=(location.hash.match(/#g=([0-9a-f-]{36})/)||[])[1];
 let me,cur=null,chats={},msgs={},reg=false,ch,prefs={};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -222,7 +223,7 @@ async function start(){
  const r=await sb.from('profiles').select('*').eq('id',user.id).single();
  if(r.error){noUser();return}me=r.data;
  $('auth').classList.add('hide');$('app').classList.remove('hide');
- await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}
+ await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}if(pendOpen){const c0=chats[pendOpen];pendOpen=null;history.replaceState(null,'',location.pathname);if(c0)open(c0)}if(nOn())pushSub(true);
  ch=sb.channel('m').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async p=>{
   const m=p.new;if(!m||!m.id)return;const pid=m.group_id||(m.sender==me.id?m.receiver:m.sender);
   if(p.eventType=='UPDATE'){const a=msgs[pid]||[],i=a.findIndex(z=>z.id==m.id);if(i<0)return;
@@ -563,7 +564,7 @@ $('cfg').onclick=()=>{
   e.style.color='#4ade80';e.textContent='Пароль изменён';$('op').value=$('np').value=$('np2').value='';
  };
  $('lo').onclick=()=>{const m=mod('<h3>Выйти из аккаунта?</h3><button id="y" style="background:#dc2626">Выйти</button><button id="n" style="background:#3a3f4b">Отмена</button>');
-  $('y').onclick=async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}await sb.auth.signOut();location.reload()};$('n').onclick=()=>m.classList.add('hide')};
+  $('y').onclick=async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}try{await pushSub(false)}catch(e){}await sb.auth.signOut();location.reload()};$('n').onclick=()=>m.classList.add('hide')};
 };
 // ---------- панель профиля, настройки (ПК), сеансы, ссылки на группы ----------
 function ask(t,ok,fn,sub,red=true,no='Отмена',over){const m=mod(`<h3>${esc(t)}</h3>${sub?`<div style="color:var(--g)">${esc(sub)}</div>`:''}<button id="ay" style="background:${red?'#dc2626':'var(--a)'}">${esc(ok)}</button><button id="an" style="background:#3a3f4b">${esc(no)}</button>`,over?'modal2':undefined);
@@ -670,10 +671,10 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden||!C)return;
 const nOn=()=>{try{return localStorage.getItem('hlz_notif')=='1'&&window.Notification&&Notification.permission=='granted'}catch(e){return false}};
 async function notify(title,body,tag){if(!nOn())return;try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r&&r.showNotification)return r.showNotification(title,{body,tag,renotify:true});new Notification(title,{body,tag})}catch(e){}}
 function ntgl(b){if(!b)return;b.classList.toggle('on',nOn());b.onclick=async()=>{
- if(b.classList.contains('on')){try{localStorage.setItem('hlz_notif','0')}catch(e){}b.classList.remove('on');return}
+ if(b.classList.contains('on')){try{localStorage.setItem('hlz_notif','0')}catch(e){}b.classList.remove('on');pushSub(false);return}
  if(!window.Notification)return alert('Этот браузер не поддерживает уведомления');
  const p=await Notification.requestPermission();if(p!='granted')return alert('Разрешите уведомления для этого сайта в настройках браузера');
- try{localStorage.setItem('hlz_notif','1')}catch(e){}b.classList.add('on')}}
+ try{localStorage.setItem('hlz_notif','1')}catch(e){}b.classList.add('on');pushSub(true)}}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // --- фон профиля ---
 const bgc={};
@@ -727,6 +728,15 @@ async function fitCircle(b,len){
   const lim=t.lim||LIMC,fit=Math.floor(lim*8*.88/D-t.ab);if(fit<t.lo)continue;
   const r=await cvid(b,{w:t.w,fps:t.fps,vb:Math.min(t.hi,fit),ab:t.ab},m);if(r.size<=lim)return r}
  bigCircle(b);return null}
+// --- фоновые уведомления (Web Push) ---
+const VAPID='BKa1J5pDu8wmral5YE2inlCh5sIwE5C1fr7iokBSVK_bODLrXa0nUNtvS6IkIELRJXyhnJXtoPKkIF78l3_rhOM';
+const b64u=x=>{const q=atob((x+'='.repeat((4-x.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(q,c=>c.charCodeAt(0))};
+async function pushSub(on){
+ try{if(!('serviceWorker' in navigator)||!window.PushManager)return;const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
+  if(!on){if(sub){await sb.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}return}
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
+  const j=sub.toJSON();await sb.rpc('save_push',{e:j.endpoint,p:j.keys.p256dh,a:j.keys.auth})}catch(e){console.warn('push',e)}}
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const c=e.data&&e.data.open&&chats[e.data.open];if(c)open(c)});
 // --- установка как приложение (PWA) ---
 let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});addEventListener('appinstalled',()=>{ip=null});
 function instBtn(b){if(!b)return;if(matchMedia('(display-mode: standalone)').matches){b.textContent='Установлено';b.disabled=true;return}
@@ -804,7 +814,7 @@ function openSettings(){
  st.onclick=e=>{if(e.target==st)closeSt()};$('stc').onclick=closeSt;
  st.querySelectorAll('.nj').forEach(n=>n.onclick=()=>{st.querySelectorAll('.nj').forEach(x=>x.classList.toggle('on',x==n));$(n.dataset.s).scrollIntoView({behavior:'smooth'})});
  ntgl($('ntp'));instBtn($('inst'));st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
- $('sx').onclick=()=>ask('Выйти из аккаунта?','Выйти',async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}await sb.auth.signOut();location.reload()});
+ $('sx').onclick=()=>ask('Выйти из аккаунта?','Выйти',async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}try{await pushSub(false)}catch(e){}await sb.auth.signOut();location.reload()});
 }
 $('bgear').onclick=openSettings;
 addEventListener('keydown',e=>{if(e.key=='Escape'){closeSt();$('pp').classList.add('hide')}});
