@@ -287,7 +287,7 @@ async function draw(){
  if(!cur||cur.id!=id)return;
  box.innerHTML='';
  a.forEach((m,ix)=>{const d=document.createElement('div');d.className='m'+(m.sender==me.id?' me':'');d.oncontextmenu=e=>{e.preventDefault();menu(e.clientX,e.clientY,m)};
-  const pm=parse(m._t),hm=pm.i||pm.a||pm.v||pm.c,q=m.reply_to&&a.find(z=>z.id==m.reply_to);if(pm.c&&!pm.t&&!pm.i&&!pm.a&&!pm.v)d.classList.add('cm');d.innerHTML=(cur.isG&&m.sender!=me.id&&!(a[ix-1]&&a[ix-1].sender==m.sender&&Date.parse(m.created_at)-Date.parse(a[ix-1].created_at)<3e5)?`<b class="sn">${esc(nm(m.sender))}</b>`:'')+(q?`<div class="q">${esc(prev(q._t||''))}</div>`:'')+(hm?'<div class="ims"></div>':'')+(pm.t?linkify(pm.t):'')+(pm.k?callTxt(m,pm.k):'')+(pm.inv?invTxt(m,pm.inv):'')+(pm.f?pm.f.map(fileTxt).join(''):'')+`<small>${m.edited?'изм. · ':''}${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}${tickMark(m)}</small>`;if(hm){const z=d.querySelector('.ims');(pm.i||[]).forEach(x=>media(z,'i',x));(pm.v||[]).forEach(x=>media(z,'v',x));if(pm.a)media(z,'a',pm.a,m.sender==me.id);if(pm.c)media(z,'c',pm.c)}d.querySelectorAll('[data-g]').forEach(x=>x.onclick=()=>join(x.dataset.g));d.querySelectorAll('[data-lg]').forEach(b=>gpv(b.dataset.lg).then(x=>{b.querySelector('b').textContent=x?x.name:'Группа недоступна';if(!x){const bt=b.querySelector('button');if(bt)bt.remove()}}));d.querySelectorAll('[data-f]').forEach(x=>x.onclick=()=>dl(pm.f[x.dataset.f],x));d.querySelectorAll('[data-pm]').forEach(x=>x.onclick=e=>{e.stopPropagation();pendMenu(m,e)});d.querySelectorAll('[data-cb]').forEach(x=>x.onclick=()=>{if(cur&&!C)on.has(cur.id)?callStart(cur,[cur.id]):alert(cur.nick+' сейчас не в сети')});box.append(d)});
+  const pm=parse(m._t),hm=pm.i||pm.a||pm.v||pm.c,q=m.reply_to&&a.find(z=>z.id==m.reply_to);if(pm.c&&!pm.t&&!pm.i&&!pm.a&&!pm.v)d.classList.add('cm');d.innerHTML=(cur.isG&&m.sender!=me.id&&!(a[ix-1]&&a[ix-1].sender==m.sender&&Date.parse(m.created_at)-Date.parse(a[ix-1].created_at)<3e5)?`<b class="sn">${esc(nm(m.sender))}</b>`:'')+(q?`<div class="q">${esc(prev(q._t||''))}</div>`:'')+(hm?'<div class="ims"></div>':'')+(pm.t?linkify(pm.t):'')+(pm.k?callTxt(m,pm.k):'')+(pm.inv?invTxt(m,pm.inv):'')+(pm.f?pm.f.map(fileTxt).join(''):'')+`<small>${m.edited?'изм. · ':''}${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}${tickMark(m)}</small>`;if(hm){const z=d.querySelector('.ims');(pm.i||[]).forEach(x=>media(z,'i',x));(pm.v||[]).forEach(x=>media(z,'v',x));if(pm.a)media(z,'a',pm.a,m.sender==me.id);if(pm.c)media(z,'c',pm.c)}d.querySelectorAll('[data-g]').forEach(x=>x.onclick=()=>join(x.dataset.g));d.querySelectorAll('[data-lg]').forEach(b=>gpv(b.dataset.lg).then(x=>{b.querySelector('b').textContent=x?x.name:'Группа недоступна';if(!x){const bt=b.querySelector('button');if(bt)bt.remove()}}));d.querySelectorAll('[data-f]').forEach(x=>x.onclick=()=>dl(pm.f[x.dataset.f],x));d.querySelectorAll('[data-pm]').forEach(x=>x.onclick=e=>{e.stopPropagation();pendMenu(m,e)});d.querySelectorAll('[data-cb]').forEach(x=>x.onclick=()=>{if(cur&&!C)callStart(cur,[cur.id])});box.append(d)});
  ups.filter(u=>u.to==cur.id).forEach(u=>{const d=document.createElement('div');d.className='m me up'+(u.kind=='c'?' cm':'');
   d.innerHTML=u.kind=='c'?'<div class="upc"><i class="sp"></i></div>':'<i class="sp"></i>'+({i:'Отправка фото…',v:'Отправка видео…',f:'Отправка файла…',a:'Отправка голосового…'}[u.kind]||'Отправка…');box.append(d)});
  box.scrollTop=box.scrollHeight;
@@ -303,7 +303,7 @@ async function push(body,t,T,rep,files){
    const pm={id:'p'+(++pcn),sender:me.id,body,reply_to:rep||null,files:files||null,created_at:new Date().toISOString(),_t:t??body,_pending:1,_row:row,_to:to};
    (msgs[to.id]=msgs[to.id]||[]).push(pm);if(cur)draw();list();return true}
   alert('Не отправлено: '+r.error.message);return false}
- const m=r.data;m._t=t??body;const a=msgs[to.id]=msgs[to.id]||[];
+ const m=r.data;sb.functions.invoke('push',{body:{msg:m.id}}).catch(()=>{});m._t=t??body;const a=msgs[to.id]=msgs[to.id]||[];
  if(!a.some(z=>z.id==m.id))a.push(m);else a.find(z=>z.id==m.id)._t=m._t;
  if(cur)draw();list();return true;
 }
@@ -774,7 +774,7 @@ async function flushPending(){if(flushing||!me||!navigator.onLine)return;flushin
  try{for(const k in msgs){for(const pm of msgs[k].filter(x=>x._pending)){
   const r=await sb.from('messages').insert(pm._row).select().single(),a=msgs[k],i=a.indexOf(pm);
   if(r.error&&/fetch|network/i.test(r.error.message||''))return;
-  if(i>=0)a.splice(i,1);if(!r.error&&!a.some(z=>z.id==r.data.id)){r.data._t=pm._t;a.push(r.data)}
+  if(!r.error)sb.functions.invoke('push',{body:{msg:r.data.id}}).catch(()=>{});if(i>=0)a.splice(i,1);if(!r.error&&!a.some(z=>z.id==r.data.id)){r.data._t=pm._t;a.push(r.data)}
   a.sort((x,y)=>Date.parse(x.created_at)-Date.parse(y.created_at))}}
   list();if(cur)draw()}finally{flushing=false}}
 async function sync(){
@@ -953,10 +953,10 @@ $('ng').onclick=newGroup;
 const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}
  // для мобильного интернета добавь TURN: ,{urls:'turn:ХОСТ:443',username:'ЛОГИН',credential:'ПАРОЛЬ'}
 ]};
-let C=null,sig,ringIv=0;
+let C=null,sig,ringIv=0;const dead=new Set();
 const sg=(to,t,d,cid)=>sig.send({type:'broadcast',event:'c',payload:{to:to.id||to,from:me.id,t,d,cid:cid||(C&&C.cid)}});
 const fmt=ms=>{const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
-const csTxt=()=>{const c=C;if(!c)return'';const xs=Object.values(c.P),st=c.t0?fmt(Date.now()-c.t0):c.role=='in'&&!c.acc?'Входящий звонок…':xs.some(x=>x.live)?'Соединение…':'Вызов…';
+const csTxt=()=>{const c=C;if(!c)return'';const xs=Object.values(c.P),st=c.t0?fmt(Date.now()-c.t0):c.role=='in'&&!c.acc?'Входящий звонок…':xs.some(x=>x.live)?'Соединение…':xs.some(x=>!on.has(x.u.id))?'Вызов · не в сети, отправлено уведомление':'Вызов…';
  return xs.length>1?st+' · '+xs.map(x=>x.u.nick).join(', '):st};
 setInterval(()=>{if(C&&C.t0)$('cs').textContent=csTxt()},1000);
 function callInit(){sig=sb.channel('calls').on('broadcast',{event:'c'},m=>onSig(m.payload)).subscribe();
@@ -970,7 +970,7 @@ function mkPc(c,x){
  const pc=x.pc=new RTCPeerConnection(ICE);
  c.st.getTracks().forEach(t=>pc.addTrack(t,c.st));if(c.vtr)x.vsend=pc.addTrack(c.vtr,c.st);
  x.au=new Audio();x.au.autoplay=true;x.au.muted=!!c.deaf;x.vid=document.createElement('video');x.vid.muted=true;x.vid.playsInline=true;x.vid.autoplay=true;x.vid.className='hide';$('rvs').append(x.vid);
- pc.onicecandidate=e=>e.candidate&&sg(x.u,'ice',e.candidate.toJSON(),c.cid);
+ pc.onicecandidate=e=>{if(e.candidate){const d=e.candidate.toJSON();(x.cands=x.cands||[]).push(d);sg(x.u,'ice',d,c.cid)}};
  pc.ontrack=e=>{const m=e.streams[0];x.au.srcObject=m;x.vid.srcObject=m;x.au.play().catch(()=>{});e.track.onmute=e.track.onunmute=updRv;updRv()};
  pc.onnegotiationneeded=async()=>{if(!x.live||pc.signalingState!='stable')return;try{const o=await pc.createOffer();await pc.setLocalDescription(o);sg(x.u,'offer',{sdp:o},c.cid)}catch(e){}};
  pc.oniceconnectionstatechange=()=>{const s=pc.iceConnectionState;
@@ -978,13 +978,14 @@ function mkPc(c,x){
   else if(s=='disconnected'){clearTimeout(x.rt);x.rt=setTimeout(()=>{if(C===c&&pc.iceConnectionState=='disconnected'&&pc.restartIce)pc.restartIce()},4000)}
   else if(s=='failed'&&C===c){const last=Object.keys(c.P).length==1;dropPeer(c,x,true);if(last)alert('Не удалось соединиться. Для мобильного интернета нужен TURN-сервер')}};
 }
-function dropPeer(c,x,notify){clearTimeout(x.ct);if(notify)sg(x.u,'end',null,c.cid);x.pc&&x.pc.close();if(x.au)x.au.srcObject=null;x.vid&&x.vid.remove();delete c.P[x.u.id];
+function dropPeer(c,x,notify){clearTimeout(x.ct);clearInterval(x.rs);if(notify)sg(x.u,'end',null,c.cid);x.pc&&x.pc.close();if(x.au)x.au.srcObject=null;x.vid&&x.vid.remove();delete c.P[x.u.id];
  if(C!==c)return;if(!Object.keys(c.P).length)callEnd(false);else{updRv();callUi()}}
 async function callStart(tg,ids){
  if(C)return;ids=ids.slice(0,3);let st;try{st=await mic()}catch(e){return alert('Нет доступа к микрофону')}
  const c=C={cid:crypto.randomUUID(),st,P:{},role:'out',acc:1,tg,roster:[me.id,...ids]};sb.functions.invoke('push',{body:{call:true,ids}}).catch(()=>{});ringStart(.3);wlOn();callUi();
  for(const id of ids){const u=tg.isG?tg.mem.find(z=>z.id==id):tg,x=peer(c,u);mkPc(c,x);
-  const o=await x.pc.createOffer();await x.pc.setLocalDescription(o);sg(u,'offer',{sdp:o,roster:c.roster,gn:tg.isG?tg.nick:null},c.cid);
+  const o=await x.pc.createOffer();await x.pc.setLocalDescription(o);x.offerMsg={sdp:o,roster:c.roster,gn:tg.isG?tg.nick:null};sg(u,'offer',x.offerMsg,c.cid);
+  x.rs=setInterval(()=>{if(C!==c||x.answered||x.live||!c.P[u.id]){clearInterval(x.rs);return}sg(u,'offer',x.offerMsg,c.cid);(x.cands||[]).forEach(d=>sg(u,'ice',d,c.cid))},3000);
   x.ct=setTimeout(()=>{if(C===c&&!x.live)dropPeer(c,x,true)},30000)} // 30 секунд на ответ
  callUi();
 }
@@ -996,8 +997,8 @@ async function callAcc(){
  callUi();
 }
 function callEnd(notify){
- const c=C;if(!c)return;C=null;clearTimeout(c.to);stopRing();wlOff();
- Object.values(c.P).forEach(x=>{clearTimeout(x.ct);if(notify)sg(x.u,'end',null,c.cid);x.pc&&x.pc.close();if(x.au)x.au.srcObject=null;x.vid&&x.vid.remove()});
+ const c=C;if(!c)return;C=null;dead.add(c.cid);clearTimeout(c.to);stopRing();wlOff();
+ Object.values(c.P).forEach(x=>{clearTimeout(x.ct);clearInterval(x.rs);if(notify)sg(x.u,'end',null,c.cid);x.pc&&x.pc.close();if(x.au)x.au.srcObject=null;x.vid&&x.vid.remove()});
  if(c.role=='out')logCall(c);
  c.st&&c.st.getTracks().forEach(t=>t.stop());c.vtr&&c.vtr.stop();
  ['lv','cf'].forEach(i=>$(i).classList.add('hide'));$('rvs').classList.add('hide');$('call').classList.remove('vo');$('call').classList.remove('mini');$('call').classList.add('hide');
@@ -1008,6 +1009,7 @@ async function onSig(p){
  if(!p||p.to!=me.id)return;if(prefs[p.from]&&prefs[p.from].blocked)return;
  const c=C;
  if(p.t=='offer'){
+  if(dead.has(p.cid))return;
   if(c&&c.cid==p.cid){const x=c.P[p.from];
    if(x&&x.pc&&(x.live||(x.pc.signalingState=='have-local-offer'&&me.id>p.from)))return reneg(c,x,p);
    if(c.acc&&!x){const u=await prof(p.from);if(u&&C===c&&!c.P[p.from])await answerNew(c,u,p)}
@@ -1021,7 +1023,7 @@ async function onSig(p){
  if(p.t=='hello'){if(c.acc&&!x){const u=await prof(p.from);if(!u||C!==c||c.P[p.from])return;const y=peer(c,u);mkPc(c,y);
    const o=await y.pc.createOffer();await y.pc.setLocalDescription(o);sg(u,'offer',{sdp:o,roster:c.roster},c.cid);connTo(c,y)}return}
  if(!x)return;
- if(p.t=='answer'){if(!x.pc||x.pc.signalingState!='have-local-offer')return;await x.pc.setRemoteDescription(p.d.sdp);await flushQ(x);if(!x.live)connTo(c,x)}
+ if(p.t=='answer'){if(!x.pc||x.pc.signalingState!='have-local-offer')return;x.answered=1;clearInterval(x.rs);await x.pc.setRemoteDescription(p.d.sdp);await flushQ(x);if(!x.live)connTo(c,x)}
  else if(p.t=='ice'){if(x.pc&&x.pc.remoteDescription)try{await x.pc.addIceCandidate(p.d)}catch(e){}else x.q.push(p.d)}
  else if(p.t=='end'||p.t=='busy'){if(p.t=='busy'&&Object.keys(c.P).length==1)alert('Занято');dropPeer(c,x,false)}
 }
@@ -1053,17 +1055,21 @@ $('cf').onclick=()=>{if(C&&C.vk&&C.vk!='screen')setVideo(C.fp=='environment'?'us
 function updRv(){const c=C;let any=0;if(c)Object.values(c.P).forEach(x=>{const m=x.vid&&x.vid.srcObject,on=!!m&&m.getVideoTracks().some(t=>t.readyState=='live'&&!t.muted);if(x.vid)x.vid.classList.toggle('hide',!on);any|=on});
  $('rvs').classList.toggle('hide',!any);$('call').classList.toggle('vo',!!any)}
 function locV(){const c=C,v=$('lv');if(c&&c.vtr){v.srcObject=new MediaStream([c.vtr]);v.style.transform=c.vk=='user'?'scaleX(-1)':'';v.classList.remove('hide')}else{v.srcObject=null;v.classList.add('hide')}}
+function vcodec(x,kind){ // выбор кодека: демка — VP9 (чёткий текст), камера — H.264 (аппаратное кодирование на телефоне)
+ try{const tr=x.pc.getTransceivers().find(z=>z.sender===x.vsend);if(!tr||!tr.setCodecPreferences||!window.RTCRtpReceiver)return;
+  const o=kind=='screen'?['vp9','h264','vp8']:['h264','vp9','vp8'],rk=c=>{const i=o.findIndex(n=>c.mimeType.toLowerCase().includes(n));return i<0?9:i};
+  tr.setCodecPreferences(RTCRtpReceiver.getCapabilities('video').codecs.slice().sort((a,b)=>rk(a)-rk(b)))}catch(e){}}
 async function setVideo(kind){ // 'user' | 'environment' | 'screen' | null — трек уходит всем участникам звонка
  const c=C;if(!c)return;if(c.vtr){c.vtr.stop();c.vtr=null}
  const xs=Object.values(c.P).filter(x=>x.pc);
  if(!kind){xs.forEach(x=>{if(x.vsend){try{x.pc.removeTrack(x.vsend)}catch(e){}x.vsend=null}});c.vk=null;callUi();locV();return}
  let st;
- try{st=kind=='screen'?await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:60,max:60},width:{ideal:1920},height:{ideal:1080}},audio:false}):await navigator.mediaDevices.getUserMedia({video:{facingMode:kind,width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}})}
+ try{st=kind=='screen'?await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:60,max:60},width:{ideal:1920},height:{ideal:1080}},audio:false}):await navigator.mediaDevices.getUserMedia({video:{facingMode:kind,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}}})}
  catch(e){c.vk=null;callUi();locV();return alert(kind=='screen'?'Не удалось начать показ экрана':'Нет доступа к камере')}
  const t=c.vtr=st.getVideoTracks()[0];if(kind!='screen')c.fp=kind;else t.contentHint='motion';
  t.onended=()=>{if(C===c&&c.vtr===t)setVideo(null)};
- for(const x of xs){if(x.vsend)await x.vsend.replaceTrack(t);else x.vsend=x.pc.addTrack(t,c.st);
-  try{const sp=x.vsend.getParameters();sp.encodings=sp.encodings&&sp.encodings.length?sp.encodings:[{}];const e0=sp.encodings[0],sc=kind=='screen';e0.maxBitrate=sc?8e6:2.5e6;e0.maxFramerate=sc?60:30;sp.degradationPreference=sc?'maintain-framerate':'balanced';await x.vsend.setParameters(sp)}catch(e){}}
+ for(const x of xs){if(x.vsend)await x.vsend.replaceTrack(t);else{x.vsend=x.pc.addTrack(t,c.st);vcodec(x,kind)}
+  try{const sp=x.vsend.getParameters();sp.encodings=sp.encodings&&sp.encodings.length?sp.encodings:[{}];const e0=sp.encodings[0],sc=kind=='screen';e0.maxBitrate=sc?12e6:4.5e6;e0.maxFramerate=sc?60:30;sp.degradationPreference=sc?'maintain-framerate':'balanced';await x.vsend.setParameters(sp)}catch(e){}}
  c.vk=kind;callUi();locV();
 }
 function ringStart(v){stopRing();const r=$('ring');r.volume=v;r.currentTime=0;r.play().catch(()=>{});if(v==1)ringIv=setInterval(()=>navigator.vibrate&&navigator.vibrate([400,200,400]),1500)}
@@ -1072,9 +1078,9 @@ const PH=c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="${c}"><path d
 function callTxt(m,k){const n=esc(m.sender==me.id?me.nick:cur.isG?nm(m.sender):cur.nick);return PH(k.ok?'#4ade80':'#9ca3af')+' <b>'+n+'</b> звонил'+(k.ok?'<br>Звонок продлился '+fmt(k.d):(m.sender!=me.id&&!cur.isG?'<br><button class="fd" style="width:auto;border-radius:12px;padding:0 12px;margin-top:6px" data-cb>Перезвонить</button>':''))}
 async function logCall(c){const j='\u0001'+JSON.stringify({k:{ok:c.t0?1:0,d:c.t0?Date.now()-c.t0:0}});await push(await pack(j),j,c.tg)}
 $('cl').onclick=()=>{if(!cur||C)return;const u=cur;
- if(!u.isG){if(!on.has(u.id))return alert(u.nick+' сейчас не в сети');return callStart(u,[u.id])}
+ if(!u.isG)return callStart(u,[u.id]);
  const ms=u.mem.filter(z=>z.id!=me.id),
-  m=mod('<h3>Кому позвонить?</h3><div style="color:var(--g);font-size:13px">Неотмеченных звонок не потревожит. Не больше 3 человек.</div>'+ms.map(z=>`<label class="row"><input type="checkbox" value="${z.id}" ${on.has(z.id)?'checked':'disabled'} style="width:auto">${ava(z)}<div><div class="n">${esc(z.nick)}</div><div class="s">${on.has(z.id)?'в сети':'не в сети'}</div></div></label>`).join('')+'<button id="gc">📞 Позвонить</button>');
+  m=mod('<h3>Кому позвонить?</h3><div style="color:var(--g);font-size:13px">Неотмеченных звонок не потревожит. Не больше 3 человек. Тем, кто не в сети, придёт уведомление.</div>'+ms.map(z=>`<label class="row"><input type="checkbox" value="${z.id}" ${on.has(z.id)?'checked':''} style="width:auto">${ava(z)}<div><div class="n">${esc(z.nick)}</div><div class="s">${on.has(z.id)?'в сети':'не в сети · придёт уведомление'}</div></div></label>`).join('')+'<button id="gc">📞 Позвонить</button>');
  $('gc').onclick=()=>{const ids=[...m.querySelectorAll('input:checked')].map(i=>i.value);if(!ids.length)return;m.classList.add('hide');callStart(u,ids)}};
 addEventListener('beforeunload',()=>{if(C)callEnd(true)});
 function presence(){ // «в сети»: пока приложение открыто
