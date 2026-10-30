@@ -140,6 +140,8 @@ button.i{background:var(--p2);padding:9px 12px}
 .bdg{margin-left:auto;background:var(--a);color:#fff;border-radius:11px;min-width:22px;height:22px;padding:0 6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
 .tk{margin-left:4px;vertical-align:-1px}.m.me small{opacity:.9}
 #cpv{position:fixed;left:-9999px;top:0;width:4px;height:4px;opacity:0;pointer-events:none}#cpc{touch-action:none}
+html.pip body>*:not(#call){display:none!important}html.pip #call{inset:0!important;border-radius:0!important;background:#000}
+html.pip #call .cb,html.pip #cmin,html.pip #cf,html.pip #lv{display:none!important}html.pip #call .cc{padding:6px}html.pip #cn{font-size:14px}html.pip #cs{font-size:11px}html.pip #cav .av{width:64px;height:64px;font-size:24px}
 .mod{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
 .mod .card{align-items:stretch;max-height:92%;overflow:auto}
 .c{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -235,7 +237,7 @@ async function start(){
   const a=msgs[pid]=msgs[pid]||[];
   if(!a.some(z=>z.id==m.id)){m._t=null;a.push(m)}
   list();if(cur&&cur.id==pid){draw();markRead()}
-  if(m.sender!=me.id&&(document.hidden||!cur||cur.id!=pid)){const t=await unpack(m.body),c0=chats[pid];notify(c0?c0.nick:'HLZ',(c0&&c0.isG?(((c0.mem||[]).find(z=>z.id==m.sender)||{}).nick||'')+': ':'')+prev(t),'m'+pid)}
+  if(m.sender!=me.id&&(document.hidden||!cur||cur.id!=pid)){const t=await unpack(m.body),c0=chats[pid];ntf(m,pid,t)}
  }).subscribe(st=>{if(st=='SUBSCRIBED'&&me)sync()});
 }
 async function load(){
@@ -426,7 +428,7 @@ function media(d,k,path,mine){
  if(k=='c'){el.className='vc';el.loop=true;el.onclick=()=>el.paused?el.play():el.pause()}
  d.append(el);
  (cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data))).then(u=>{
-  el.src=u;if(k=='i'){el.onload=()=>{$('msgs').scrollTop=1e9};el.onclick=()=>mod(`<img src="${u}" style="width:100%;max-height:none"><a class="dlb" href="${u}" download="hlz-фото-${Date.now()}.${mimeExt(path)}">⬇ Скачать</a>`)}
+  el.src=u;if(k=='i'){el.onload=()=>{$('msgs').scrollTop=1e9};el.onclick=()=>mod(`<img src="${u}" style="width:100%;max-height:none"><a class="dlb" href="${u}" download="hlz-фото-${Date.now()}.${mimeExt(path)}" onclick="if(window.HLZ){event.preventDefault();hlzSaveUrl('${u}','hlz-фото-${Date.now()}.${mimeExt(path)}')}">⬇ Скачать</a>`)}
  }).catch(()=>{el.alt='не загрузилось'});
 }
 let camS;
@@ -555,10 +557,10 @@ const mod=(h,id)=>{const m=$(id||'modal');m.innerHTML='<div class="card">'+h+'</
 $('pill').onclick=()=>{if(cur)cur.isG?grpInfo():usrInfo(cur,1)};
 $('cfg').onclick=()=>{
  const m=mod(`<h3>Настройки</h3><div class="c">${ava(me,1)}<b>${esc(me.nick)}</b><span style="color:var(--g)">@${esc(me.username)}</span></div>
-  <button id="sv">✏️ Редактировать профиль</button><div class="sr"><b>Уведомления</b><button class="tg" id="ntm"></button></div><div class="sr"><b>Приложение</b><button class="i" id="instm">Установить</button></div><div class="sr"><b>Проверка уведомлений</b><button class="i" id="ptm">Проверить</button></div>
+  <button id="sv">✏️ Редактировать профиль</button><div class="sr"><b>Уведомления</b><button class="tg" id="ntm"></button></div><div class="sr"><b>Приложение</b><button class="i" id="instm">Установить</button></div><div class="sr" style="display:none"><b>Обновление приложения</b><span></span><button class="i" id="updm">Проверить</button></div><div class="sr"><b>Проверка уведомлений</b><button class="i" id="ptm">Проверить</button></div>
  <hr style="border-color:var(--b);width:100%"><input id="op" type="password" placeholder="Текущий пароль"><input id="np" type="password" placeholder="Новый пароль (от 6)"><input id="np2" type="password" placeholder="Повторите новый пароль">
  <button id="cpw">Сменить пароль</button><div class="err" id="se"></div><button id="lo" style="background:#dc2626">Выйти</button>`);
- ntgl($('ntm'));instBtn($('instm'));$('ptm').onclick=pushTest;$('sv').onclick=()=>editProfile();
+ ntgl($('ntm'));instBtn($('instm'));updBtn($('updm'));$('ptm').onclick=pushTest;$('sv').onclick=()=>editProfile();
  $('cpw').onclick=async()=>{
   const e=$('se'),bad=t=>{e.style.color='#f87171';e.textContent=t};
   if(!$('op').value)return bad('Введите текущий пароль');
@@ -670,18 +672,24 @@ mn.ondrop=e=>{e.preventDefault();mn.classList.remove('dz');dropIn(e.dataTransfer
 // --- звонок: свернуть, экран не засыпает, возврат во вкладку ---
 $('cmin').onclick=()=>$('call').classList.add('mini');
 $('call').onclick=e=>{const c=$('call');if(c.classList.contains('mini')&&!e.target.closest('button'))c.classList.remove('mini')};
-let wl=null;async function wlOn(){try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request('screen');wl.onrelease=()=>{wl=null}}}catch(e){}}
-function wlOff(){try{wl&&wl.release()}catch(e){}wl=null}
-document.addEventListener('visibilitychange',()=>{if(document.hidden||!C)return;wlOn();
+function pipNow(){const v=C&&Object.values(C.P).map(x=>x.vid).find(z=>z&&!z.classList.contains('hide')&&z.srcObject);
+ if(v&&document.pictureInPictureEnabled&&!document.pictureInPictureElement)return v.requestPictureInPicture().catch(()=>{})}
+async function reviveMic(){ // если система отключила микрофон в фоне — берём его заново и подставляем в звонок
+ const c=C;if(!c||!c.st)return;const t=c.st.getAudioTracks()[0];if(t&&t.readyState=='live')return;
+ try{const ns=await mic(),nt=ns.getAudioTracks()[0];nt.enabled=!c.mute&&!c.deaf;c.st.getAudioTracks().forEach(x=>c.st.removeTrack(x));c.st.addTrack(nt);
+  for(const x of Object.values(c.P)){const sd=x.pc&&x.pc.getSenders().find(z=>z.track&&z.track.kind=='audio');if(sd)await sd.replaceTrack(nt)}}catch(e){}}
+let wl=null;async function wlOn(){if(window.HLZ)try{HLZ.call(true)}catch(e){}try{if(navigator.mediaSession){navigator.mediaSession.metadata=new MediaMetadata({title:'HLZ',artist:'Идёт звонок'});navigator.mediaSession.playbackState='playing';try{navigator.mediaSession.setActionHandler('enterpictureinpicture',pipNow)}catch(e){}}}catch(e){}try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request('screen');wl.onrelease=()=>{wl=null}}}catch(e){}}
+function wlOff(){if(window.HLZ)try{HLZ.call(false)}catch(e){}try{if(navigator.mediaSession)navigator.mediaSession.playbackState='none'}catch(e){}try{wl&&wl.release()}catch(e){}wl=null}
+document.addEventListener('visibilitychange',()=>{if(document.hidden||!C)return;wlOn();reviveMic();
  Object.values(C.P).forEach(x=>{x.vid&&x.vid.play().catch(()=>{});x.au&&x.au.play().catch(()=>{});const s=x.pc&&x.pc.iceConnectionState;if((s=='disconnected'||s=='failed')&&x.pc.restartIce)x.pc.restartIce()});
  const lv=$('lv');if(lv.srcObject)lv.play().catch(()=>{});updRv()});
 // --- уведомления ---
-const nOn=()=>{try{return localStorage.getItem('hlz_notif')=='1'&&window.Notification&&Notification.permission=='granted'}catch(e){return false}};
-async function notify(title,body,tag){if(!nOn())return;try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r&&r.showNotification)return r.showNotification(title,{body,tag,renotify:true});new Notification(title,{body,tag})}catch(e){}}
+const nOn=()=>{try{return localStorage.getItem('hlz_notif')=='1'&&(window.HLZ||(window.Notification&&Notification.permission=='granted'))}catch(e){return false}};
+async function notify(title,body,tag){if(window.HLZ||!nOn())return;try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r&&r.showNotification)return r.showNotification(title,{body,tag,renotify:true});new Notification(title,{body,tag})}catch(e){}}
 function ntgl(b){if(!b)return;b.classList.toggle('on',nOn());b.onclick=async()=>{
  if(b.classList.contains('on')){try{localStorage.setItem('hlz_notif','0')}catch(e){}b.classList.remove('on');pushSub(false);return}
- if(!window.Notification)return alert('Этот браузер не поддерживает уведомления');
- const p=await Notification.requestPermission();if(p!='granted')return alert('Разрешите уведомления для этого сайта в настройках браузера');
+ if(!window.HLZ&&!window.Notification)return alert('Этот браузер не поддерживает уведомления');
+ if(!window.HLZ){const p=await Notification.requestPermission();if(p!='granted')return alert('Разрешите уведомления для этого сайта в настройках браузера')}
  try{localStorage.setItem('hlz_notif','1')}catch(e){}b.classList.add('on');pushSub(true)}}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // --- фон профиля ---
@@ -720,14 +728,14 @@ function voice(d,path,mine){
 // --- скачивание медиа из сообщения ---
 const mimeExt=q=>q.split('.').pop()||'bin';
 async function saveMedia(path,name){const u=await(cache[path]=cache[path]||sb.storage.from('media').download(path).then(r=>URL.createObjectURL(r.data)));
- const a=document.createElement('a');a.href=u;a.download=name;document.body.append(a);a.click();a.remove()}
+ await saveBlob(await (await fetch(u)).blob(),name)}
 async function dlMsg(pm){const L=[...(pm.i||[]).map(q=>[q,'фото']),...(pm.v||[]).map(q=>[q,'видео']),...(pm.a?[[pm.a,'голосовое']]:[]),...(pm.c?[[pm.c,'кружок']]:[])];let n=0;
  for(const [q,t] of L){try{await saveMedia(q,`hlz-${t}-${Date.now()}-${++n}.${mimeExt(q)}`)}catch(e){alert('Не скачалось')}await new Promise(r=>setTimeout(r,300))}}
 // --- кружок: лимит 5 МБ (480p → 360p → прежнее сжатие с лимитом 10 МБ) ---
 const LIMC=5*1048576,LIMC3=10*1048576;
 function bigCircle(b){ // лимит превышен: показываем вес лучшего качества и даём скачать
  const m=mod(`<h3>Лимит превышен</h3><div style="color:var(--g)">Кружок в лучшем качестве весит ${sz(b.size)}, а в чат влезает не больше 5 МБ.</div><button id="bcd">⬇ Скачать</button><button id="bcn" style="background:#3a3f4b">Отмена</button>`);
- $('bcd').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='hlz-кружок.'+(b.type.includes('mp4')?'mp4':'webm');document.body.append(a);a.click();a.remove();m.classList.add('hide')};
+ $('bcd').onclick=()=>{saveBlob(b,'hlz-кружок.'+(b.type.includes('mp4')?'mp4':'webm'));m.classList.add('hide')};
  $('bcn').onclick=()=>m.classList.add('hide')}
 async function fitCircle(b,len){
  if(b.size<=LIMC)return b;
@@ -740,12 +748,15 @@ async function fitCircle(b,len){
 const VAPID='BKa1J5pDu8wmral5YE2inlCh5sIwE5C1fr7iokBSVK_bODLrXa0nUNtvS6IkIELRJXyhnJXtoPKkIF78l3_rhOM';
 const b64u=x=>{const q=atob((x+'='.repeat((4-x.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(q,c=>c.charCodeAt(0))};
 async function pushSub(on){
+ if(window.HLZ){try{const t=HLZ.token&&HLZ.token();if(!t)return;if(on)await sb.rpc('save_fcm',{t});else await sb.rpc('del_fcm',{t})}catch(e){}return}
  try{if(!('serviceWorker' in navigator)||!window.PushManager)return;const reg=await navigator.serviceWorker.ready;let sub=await reg.pushManager.getSubscription();
   if(!on){if(sub){await sb.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}return}
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
   const j=sub.toJSON();await sb.rpc('save_push',{e:j.endpoint,p:j.keys.p256dh,a:j.keys.auth})}catch(e){console.warn('push',e)}}
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const c=e.data&&e.data.open&&chats[e.data.open];if(c)open(c)});
 async function pushTest(){ // пошаговая проверка фоновых уведомлений
+ if(window.HLZ){const t=await sb.functions.invoke('push',{body:{test:true}});let msg=t.error?t.error.message:JSON.stringify(t.data);if(t.error)try{msg=JSON.stringify(await t.error.context.json())}catch(e){}
+  const m=mod('<h3>Проверка уведомлений</h3><div style="word-break:break-word;font-size:13px">'+(t.error||!(t.data&&t.data.ok)?'❌ ':'✅ ')+esc(msg)+'</div><button class="i" id="ptx">Закрыть</button>');$('ptx').onclick=()=>m.classList.add('hide');return}
  const out=[],ok=(t,g,x)=>out.push([g?'✅':'❌',t,x||'']);
  ok('Уведомления разрешены в браузере',window.Notification&&Notification.permission=='granted',window.Notification?Notification.permission:'не поддерживаются');
  let reg=null,sub=null;
@@ -762,9 +773,21 @@ async function pushTest(){ // пошаговая проверка фоновых
   +'<div style="color:var(--g);font-size:13px">Если всё ✅, тестовое уведомление уже пришло.</div><button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
 }
+// --- мост с Android-приложением (оболочка на Kotlin) ---
+async function saveBlob(bl,name){
+ if(window.HLZ&&HLZ.save){const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.readAsDataURL(bl)});HLZ.save(b64,name,bl.type||'application/octet-stream');return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=name;document.body.append(a);a.click();a.remove()}
+const hlzSaveUrl=async(u,n)=>saveBlob(await (await fetch(u)).blob(),n);
+function updBtn(b){if(!b)return;const r=b.closest('.sr');if(!window.HLZ){r.style.display='none';return}r.style.display='flex';r.querySelector('span').textContent='Версия '+HLZ.version();b.onclick=()=>HLZ.checkUpdate()}
+function ntf(m,pid,t){const c0=chats[pid],g=c0&&c0.isG,sn=g?(((c0.mem||[]).find(z=>z.id==m.sender)||{}).nick||''):'';
+ notify(g?(sn+' • '+c0.nick):(c0?c0.nick:'HLZ'),prev(t),'m'+pid+(g?':'+m.sender:''))}
+window.hlzPip=on=>{document.documentElement.classList.toggle('pip',on);if(on)$('call').classList.remove('mini')};
+window.hlzOpen=id=>{const c=chats[id];if(c)open(c)};
+window.hlzBack=()=>{const md=$('modal');if(!md.classList.contains('hide')){md.classList.add('hide');return true}if(!$('st').classList.contains('hide')){closeSt();return true}if(cur){close();return true}return false};
+try{if(window.HLZ&&localStorage.getItem('hlz_notif')===null)localStorage.setItem('hlz_notif','1')}catch(e){}
 // --- установка как приложение (PWA) ---
 let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});addEventListener('appinstalled',()=>{ip=null});
-function instBtn(b){if(!b)return;if(matchMedia('(display-mode: standalone)').matches){b.textContent='Установлено';b.disabled=true;return}
+function instBtn(b){if(!b)return;if(window.HLZ){const r=b.closest('.sr');if(r)r.style.display='none';return}if(matchMedia('(display-mode: standalone)').matches){b.textContent='Установлено';b.disabled=true;return}
  b.onclick=async()=>{if(ip){ip.prompt();try{await ip.userChoice}catch(e){}ip=null}else alert('Откройте меню браузера (⋮) и выберите «Установить приложение» или «Добавить на главный экран». На iPhone: «Поделиться» → «На экран Домой».')}}
 // --- синхронизация (подстраховка к realtime), очередь неотправленных ---
 function pendMenu(m,e){const p=parse(m._t),pure=p.t&&!p.i&&!p.a&&!p.v&&!p.c&&!p.k&&!p.inv&&!p.f,out=()=>{const a=msgs[m._to.id];a.splice(a.indexOf(m),1)};
@@ -792,7 +815,7 @@ async function sync(){
   await loadGroups();
   const rr=await sb.from('reads').select('*');
   if(!rr.error)(rr.data||[]).forEach(x=>{if(x.user_id==me.id){if(!myRd[x.key]||Date.parse(x.read_at)>Date.parse(myRd[x.key]))myRd[x.key]=x.read_at}else if(x.key==me.id)prRd[x.user_id]=x.read_at});
-  for(const [m,pid] of fresh)if((document.hidden||!cur||cur.id!=pid)&&nOn()){const c0=chats[pid],t=await unpack(m.body);notify(c0?c0.nick:'HLZ',(c0&&c0.isG?(((c0.mem||[]).find(z=>z.id==m.sender)||{}).nick||'')+': ':'')+prev(t),'m'+pid)}
+  for(const [m,pid] of fresh)if((document.hidden||!cur||cur.id!=pid)&&nOn()){const c0=chats[pid],t=await unpack(m.body);ntf(m,pid,t)}
   list();if(cur){draw();markRead()}
  }finally{syncing=false}}
 setInterval(()=>{flushPending();sync()},15000);
@@ -867,11 +890,11 @@ function openSettings(){
  const st=$('st');
  st.innerHTML=`<div class="setp"><button class="lnk cl" id="stc">✕</button><div class="sn2"><div class="ni on">👤 <span>Учётная запись</span></div><div class="nj on" data-s="s1">Информация об учётной записи</div><div class="nj" data-s="s2">Пароль и безопасность</div><div class="ni" data-s="s3" style="cursor:pointer">🔔 <span>Уведомления</span></div><div class="nx"></div><div class="ni red" id="sx">🚪 <span>Выйти</span></div></div>
  <div class="sc"><h2 id="s1">Информация об учётной записи</h2><div class="sr"><b>Имя пользователя</b><span>${esc(me.username)}</span></div><hr style="border:0;border-top:1px solid #2a2f3a">
- <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке).</div><div class="sr"><b>Проверить уведомления</b><button class="i" id="ptb">Проверить</button></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s4">Приложение</h2><div class="sr"><b>Установить HLZ как приложение</b><button class="i" id="inst">Установить</button></div></div></div>`;
+ <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке).</div><div class="sr"><b>Проверить уведомления</b><button class="i" id="ptb">Проверить</button></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s4">Приложение</h2><div class="sr"><b>Установить HLZ как приложение</b><button class="i" id="inst">Установить</button></div><div class="sr" style="display:none"><b>Обновление приложения</b><span></span><button class="i" id="updb">Проверить</button></div></div></div>`;
  st.classList.remove('hide');cnt();
  st.onclick=e=>{if(e.target==st)closeSt()};$('stc').onclick=closeSt;
  st.querySelectorAll('.nj').forEach(n=>n.onclick=()=>{st.querySelectorAll('.nj').forEach(x=>x.classList.toggle('on',x==n));$(n.dataset.s).scrollIntoView({behavior:'smooth'})});
- ntgl($('ntp'));instBtn($('inst'));$('ptb').onclick=pushTest;st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
+ ntgl($('ntp'));instBtn($('inst'));updBtn($('updb'));$('ptb').onclick=pushTest;st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
  $('sx').onclick=()=>ask('Выйти из аккаунта?','Выйти',async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}try{await pushSub(false)}catch(e){}await sb.auth.signOut();location.reload()});
 }
 $('bgear').onclick=openSettings;
@@ -896,7 +919,7 @@ async function addFile(f){ // сжатие файла на устройстве 
 async function dl(f,b){b.textContent='…';
  const r=await sb.storage.from('media').download(f.p);if(r.error){b.textContent='⬇';return alert('Не скачалось: '+r.error.message)}
  let bl=r.data;if(f.z)bl=await new Response(bl.stream().pipeThrough(new DecompressionStream('gzip'))).blob(); // получатель получает исходный файл
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([bl],{type:f.t||'application/octet-stream'}));a.download=f.n;document.body.append(a);a.click();a.remove();b.textContent='⬇';
+ await saveBlob(new Blob([bl],{type:f.t||'application/octet-stream'}),f.n);b.textContent='⬇';
 }
 async function setPref(key,patch){const old=prefs[key],o=Object.assign({user_id:me.id,key},old||{},patch);prefs[key]=o;list();sendBar();
  const r=await sb.from('chat_prefs').upsert(o,{onConflict:'user_id,key'});if(r.error){prefs[key]=old;list();sendBar();alert(r.error.message)}}
@@ -953,7 +976,7 @@ $('ng').onclick=newGroup;
 const ICE={iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}
  // для мобильного интернета добавь TURN: ,{urls:'turn:ХОСТ:443',username:'ЛОГИН',credential:'ПАРОЛЬ'}
 ]};
-let C=null,sig,ringIv=0;const dead=new Set();
+let C=null,sig,ringIv=0;const dead=new Set();let callTimes=[],inCalls={};const seenCid=new Set();
 const sg=(to,t,d,cid)=>sig.send({type:'broadcast',event:'c',payload:{to:to.id||to,from:me.id,t,d,cid:cid||(C&&C.cid)}});
 const fmt=ms=>{const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const csTxt=()=>{const c=C;if(!c)return'';const xs=Object.values(c.P),st=c.t0?fmt(Date.now()-c.t0):c.role=='in'&&!c.acc?'Входящий звонок…':xs.some(x=>x.live)?'Соединение…':xs.some(x=>!on.has(x.u.id))?'Вызов · не в сети, отправлено уведомление':'Вызов…';
@@ -981,7 +1004,7 @@ function mkPc(c,x){
 function dropPeer(c,x,notify){clearTimeout(x.ct);clearInterval(x.rs);if(notify)sg(x.u,'end',null,c.cid);x.pc&&x.pc.close();if(x.au)x.au.srcObject=null;x.vid&&x.vid.remove();delete c.P[x.u.id];
  if(C!==c)return;if(!Object.keys(c.P).length)callEnd(false);else{updRv();callUi()}}
 async function callStart(tg,ids){
- if(C)return;ids=ids.slice(0,3);let st;try{st=await mic()}catch(e){return alert('Нет доступа к микрофону')}
+ if(C)return;ids=ids.slice(0,3);{const now=Date.now();callTimes=callTimes.filter(t=>now-t<30000);if(callTimes.length>=3)return alert('Слишком много звонков подряд. Подождите полминуты.');callTimes.push(now)}let st;try{st=await mic()}catch(e){return alert('Нет доступа к микрофону')}
  const c=C={cid:crypto.randomUUID(),st,P:{},role:'out',acc:1,tg,roster:[me.id,...ids]};sb.functions.invoke('push',{body:{call:true,ids}}).catch(()=>{});ringStart(.3);wlOn();callUi();
  for(const id of ids){const u=tg.isG?tg.mem.find(z=>z.id==id):tg,x=peer(c,u);mkPc(c,x);
   const o=await x.pc.createOffer();await x.pc.setLocalDescription(o);x.offerMsg={sdp:o,roster:c.roster,gn:tg.isG?tg.nick:null};sg(u,'offer',x.offerMsg,c.cid);
@@ -1015,6 +1038,7 @@ async function onSig(p){
    if(c.acc&&!x){const u=await prof(p.from);if(u&&C===c&&!c.P[p.from])await answerNew(c,u,p)}
    return}
   if(c)return sg(p.from,'busy',null,p.cid);
+  if(!seenCid.has(p.cid)){seenCid.add(p.cid);const now=Date.now(),la=(inCalls[p.from]=(inCalls[p.from]||[]).filter(t=>now-t<30000));if(la.length>=3){dead.add(p.cid);return}la.push(now)} // защита от спама звонками
   const u=await prof(p.from);if(!u||C)return;
   const n=C={cid:p.cid,P:{},role:'in',roster:p.d.roster||[],offer:p.d.sdp,gn:p.d.gn};peer(n,u);ringStart(1);callUi();if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
   n.to=setTimeout(()=>{if(C===n&&!n.acc)callEnd(true)},30000);return;
@@ -1044,6 +1068,7 @@ function callUi(){
    add('📹',()=>cam?setVideo(null):camPick(c),cam?'on':'i'); // выключается сразу, при включении спрашивает камеру
    if(navigator.mediaDevices.getDisplayMedia)add('🖥',()=>setVideo(c.vk=='screen'?null:'screen'),c.vk=='screen'?'on':'i');
   }
+  if(!window.HLZ&&document.pictureInPictureEnabled&&xs.some(x=>x.vid&&!x.vid.classList.contains('hide')))add('⧉',pipNow,'i'); // окно-картинка (если у собеседника видео)
   add('📞',()=>callEnd(true),'cr');
  }
  $('cf').classList.toggle('hide',!(c.vk&&c.vk!='screen'));
