@@ -774,7 +774,12 @@ async function hlzFcm(tries){
  try{
   const t=window.HLZ.fcmToken()||'';
   if(!t){if(tries>1)setTimeout(()=>hlzFcm(tries-1),1500);return}
-  const r=await sb.rpc('save_fcm_token',{t});
+  let r=await sb.rpc('save_fcm_token',{t});
+  if(r.error){
+   // резерв: без входа, по личному ключу канала
+   const k2=hlzKey||((await sb.rpc('my_notif_key')).data||'');
+   if(k2)r=await sb.rpc('save_fcm_token_key',{t,k:k2});
+  }
   if(r.error)throw r.error;
   window.hlzFcmErr='';
  }catch(e){window.hlzFcmErr=(e&&e.message)||String(e)}
@@ -932,7 +937,7 @@ async function pushTest(){ // пошаговая проверка фоновых
   +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
   +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:190px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`
       :`<div style="color:#f59e0b;font-size:12px;margin-top:8px">Журнала нет: служба приёма ни разу не запускалась. Проверь ключ и разрешение на уведомления, затем выключи и снова включи «Уведомления».</div>`)
-  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button></div>`:'')
+  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button><button class="i" id="pfm">Тест токена</button></div>`:'')
   +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
  if($('pnt'))$('pnt').onclick=()=>{try{window.HLZ.requestNotif()}catch(e){}setTimeout(()=>pushTest(),1500)};
@@ -943,6 +948,20 @@ async function pushTest(){ // пошаговая проверка фоновых
    const r=await sb.rpc('take_notifs',{k:hlzKey||''});
    alert(r.error?('Очередь: ошибка — '+r.error.message):('Очередь работает, забрано записей: '+((r.data||[]).length)));
   }catch(e){alert('Очередь: '+e)}
+ };
+ if($('pfm'))$('pfm').onclick=async()=>{
+  try{
+   const t=window.HLZ.fcmToken()||'';
+   if(!t){alert('Токен Firebase ещё не получен. Проверь google-services.json и интернет.');return}
+   let r=await sb.rpc('save_fcm_token',{t}),how='save_fcm_token';
+   if(r.error){
+    const k2=hlzKey||((await sb.rpc('my_notif_key')).data||'');
+    const r2=await sb.rpc('save_fcm_token_key',{t,k:k2});
+    if(!r2.error){how='save_fcm_token_key';r={error:null}}
+    else alert('save_fcm_token: '+r.error.message+'\n\nsave_fcm_token_key: '+r2.error.message);
+   }
+   if(!r.error)alert('Токен сохранён ('+how+')\n\n'+t.slice(0,22)+'… · '+t.length+' симв.');
+  }catch(e){alert('Токен: '+e)}
  };
 }
 // --- установка как приложение (PWA) ---
