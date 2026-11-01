@@ -915,7 +915,8 @@ async function pushTest(){ // пошаговая проверка фоновых
  }
  const m=mod('<h3>Проверка уведомлений</h3>'+out.map(([i,t,x])=>`<div style="padding:6px 0">${i} ${esc(t)}${x?`<div style="color:var(--g);font-size:12px;word-break:break-word">${esc(x)}</div>`:''}</div>`).join('')
   +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
-  +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:170px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`:'')
+  +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:190px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`
+      :`<div style="color:#f59e0b;font-size:12px;margin-top:8px">Журнала нет: служба приёма ни разу не запускалась. Проверь ключ и разрешение на уведомления, затем выключи и снова включи «Уведомления».</div>`)
   +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button></div>`:'')
   +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
@@ -1414,7 +1415,7 @@ async function callStart(tg,ids){
   const u=tg&&tg.isG?tg.mem.find(z=>z.id==id):tg;if(!u)continue;
   const x=peer(c,u);mkPc(c,x);
   const o=await x.pc.createOffer();await x.pc.setLocalDescription(o);
-  const msg={sdp:o,roster:c.roster,gn:c.gn,gid:c.gid,host:c.host,st:myState()};
+  const msg={sdp:o,roster:c.roster,gn:c.gn,gid:c.gid,host:c.host,st:myState(),ts:Date.now()};
   sg(u,'offer',msg,c.cid);
   x.rs=setInterval(()=>{if(C!==c||x.answered||x.live||!c.P[u.id]){clearInterval(x.rs);return}sg(u,'offer',msg,c.cid)},3000);
   x.ct=setTimeout(()=>{if(C===c&&!x.live)dropPeer(c,x,true)},30000);
@@ -1476,6 +1477,8 @@ async function onSig(p){
  const c=C;
  if(p.t=='offer'){
   if(dead.has(p.cid)||banned.has(p.cid))return;
+  // звонок, который уже давно сбросили, не должен звонить заново
+  if(p.d&&p.d.ts&&Date.now()-p.d.ts>45000)return;
   // «Отклонить» из уведомления: сразу отвечаем «занято», не показывая звонок
   if(hlzDecl&&Date.now()-hlzDecl<60000&&!c){hlzDecl=0;sg(p.from,'busy',null,p.cid);return}
   if(c&&c.cid==p.cid){
