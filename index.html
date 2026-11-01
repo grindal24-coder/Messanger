@@ -791,9 +791,15 @@ window.hlzBack=()=>{ // «назад»: закрыть меню/окно/чат;
 window.hlzPip=on=>{try{document.documentElement.classList.toggle('pip',!!on)}catch(e){}};
 // входящий звонок в приложении — баннер сверху, как уведомление
 let hlzDecl=(/[#&]d=1/.test(location.hash))?Date.now():0;
-window.hlzDecline=()=>{hlzDecl=Date.now()};
+window.hlzDecline=()=>{
+ hlzDecl=Date.now();
+ const c=C;if(c&&c.role=='in'&&!c.acc)callEnd(true); // звонок уже звонит — отклоняем сразу
+};
 let hlzAcc=(/[#&]a=1/.test(location.hash))?Date.now():0;
-window.hlzAccept=()=>{hlzAcc=Date.now()};
+window.hlzAccept=()=>{
+ hlzAcc=Date.now();
+ const c=C;if(c&&c.role=='in'&&!c.acc)callAcc(); // звонок уже звонит — принимаем сразу
+};
 function hlzCallBanner(){
  const b=$('cbann');if(!b)return;
  const c=C,on=!!(window.HLZ&&c&&c.role=='in'&&!c.acc&&!c.copen);
@@ -910,12 +916,18 @@ async function pushTest(){ // пошаговая проверка фоновых
  const m=mod('<h3>Проверка уведомлений</h3>'+out.map(([i,t,x])=>`<div style="padding:6px 0">${i} ${esc(t)}${x?`<div style="color:var(--g);font-size:12px;word-break:break-word">${esc(x)}</div>`:''}</div>`).join('')
   +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
   +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:170px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`:'')
-  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button></div>`:'')
+  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button></div>`:'')
   +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
  if($('pnt'))$('pnt').onclick=()=>{try{window.HLZ.requestNotif()}catch(e){}setTimeout(()=>pushTest(),1500)};
  if($('pfs'))$('pfs').onclick=()=>{try{window.HLZ.openSettings('fullscreen')}catch(e){}};
  if($('pst'))$('pst').onclick=()=>{try{window.HLZ.openSettings('app')}catch(e){}};
+ if($('pq'))$('pq').onclick=async()=>{
+  try{
+   const r=await sb.rpc('take_notifs',{k:hlzKey||''});
+   alert(r.error?('Очередь: ошибка — '+r.error.message):('Очередь работает, забрано записей: '+((r.data||[]).length)));
+  }catch(e){alert('Очередь: '+e)}
+ };
 }
 // --- установка как приложение (PWA) ---
 let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});addEventListener('appinstalled',()=>{ip=null});
