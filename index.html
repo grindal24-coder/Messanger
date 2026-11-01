@@ -179,7 +179,7 @@ button.i{background:var(--p2);padding:9px 12px}
 @media(min-aspect-ratio:4/3){#cgrid.n2{grid-template-columns:1fr 1fr;grid-template-rows:1fr}}
 #cgrid .p{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#151922;border-radius:14px;overflow:hidden;min-width:0;min-height:0;cursor:pointer}
 #cgrid .p.away{display:none}
-#cgrid .p video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;display:none;transition:transform .12s;transform-origin:center}
+#cgrid .p video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;display:none;transition:transform .12s;transform-origin:center}
 #cgrid .p.v video{display:block}
 #cgrid .p.v .tav,#cgrid .p.v .nn{display:none}
 #cgrid .p .tav{width:clamp(48px,26%,130px);aspect-ratio:1;border-radius:50%;background:var(--a);display:flex;align-items:center;justify-content:center;font-size:clamp(20px,7vw,44px);font-weight:700;overflow:hidden;flex:none}
@@ -757,12 +757,14 @@ function ntgl(b){if(!b)return;b.classList.toggle('on',nOn());b.onclick=async()=>
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 // ---------- приложение HLZ для Android (window.HLZ, см. HLZ-android) ----------
 let hlzKey='';
+const HLZ_PAGE_BUILD='01.11.2026 17:25'; // чтобы в проверке было видно, какая версия страницы загружена
 async function hlzSyncKey(){ // личный ключ канала уведомлений -> приложению
  if(!window.HLZ)return;
  try{
   if(!hlzKey){const r=await sb.rpc('my_notif_key');if(r.error)throw r.error;hlzKey=r.data||''}
   window.HLZ.notifKey(nOn()?hlzKey:'');
- }catch(e){console.warn('HLZ notifKey',e)}
+  window.hlzKeyErr='';
+ }catch(e){window.hlzKeyErr=(e&&e.message)||String(e);console.warn('HLZ notifKey',e)}
 }
 function hlzCall(on){try{window.HLZ&&window.HLZ.call(!!on)}catch(e){}}
 window.hlzOpen=async id=>{ // открыть чат по id — нажатие на уведомление
@@ -875,8 +877,9 @@ async function pushTest(){ // пошаговая проверка фоновых
  if(window.HLZ){ // в приложении HLZ: проверяем саму оболочку, а не Web Push
   await hlzSyncKey();
   let st={};try{st=JSON.parse(window.HLZ.status()||'{}')}catch(e){}
-  ok('Приложение HLZ '+(st.version||''),true,'');
+  ok('Приложение HLZ '+(st.version||''),true,'страница: '+HLZ_PAGE_BUILD);
   ok('Ключ канала уведомлений сохранён',st.key>0,st.key>0?'есть':'нет: выключи и снова включи «Уведомления» и повтори проверку');
+  if(!(st.key>0)&&window.hlzKeyErr)ok('Ошибка получения ключа',false,String(window.hlzKeyErr).slice(0,200));
   ok('Служба приёма запущена',!!st.service,st.service?'работает':'не запущена — проверь разрешение на уведомления');
   ok('Канал связи с сервером открыт',!!st.connected,st.connected?'да':'нет — придёт с задержкой до ~15 c через очередь');
   lg=st.log||'';
@@ -907,8 +910,12 @@ async function pushTest(){ // пошаговая проверка фоновых
  const m=mod('<h3>Проверка уведомлений</h3>'+out.map(([i,t,x])=>`<div style="padding:6px 0">${i} ${esc(t)}${x?`<div style="color:var(--g);font-size:12px;word-break:break-word">${esc(x)}</div>`:''}</div>`).join('')
   +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
   +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:170px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`:'')
+  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button></div>`:'')
   +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
+ if($('pnt'))$('pnt').onclick=()=>{try{window.HLZ.requestNotif()}catch(e){}setTimeout(()=>pushTest(),1500)};
+ if($('pfs'))$('pfs').onclick=()=>{try{window.HLZ.openSettings('fullscreen')}catch(e){}};
+ if($('pst'))$('pst').onclick=()=>{try{window.HLZ.openSettings('app')}catch(e){}};
 }
 // --- установка как приложение (PWA) ---
 let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});addEventListener('appinstalled',()=>{ip=null});
@@ -1106,12 +1113,17 @@ const sg=(to,t,d,cid)=>sig.send({type:'broadcast',event:'c',payload:{to:to.id||t
 const fmt=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 
 // громкость и «заглушить для себя» — хранится у меня и действует и в личных, и в групповых звонках
-let VOL={},SMUTE=new Set();
+let VOL={},SMUTE=new Set(),SVOL={},SSMUTE=new Set();
 try{VOL=JSON.parse(localStorage.getItem('hlz_cvol')||'{}')||{}}catch(e){VOL={}}
 try{SMUTE=new Set(JSON.parse(localStorage.getItem('hlz_cmute')||'[]')||[])}catch(e){}
-const saveVol=()=>{try{localStorage.setItem('hlz_cvol',JSON.stringify(VOL));localStorage.setItem('hlz_cmute',JSON.stringify([...SMUTE]))}catch(e){}};
+try{SVOL=JSON.parse(localStorage.getItem('hlz_svol')||'{}')||{}}catch(e){SVOL={}}
+try{SSMUTE=new Set(JSON.parse(localStorage.getItem('hlz_smute')||'[]')||[])}catch(e){}
+const saveVol=()=>{try{localStorage.setItem('hlz_cvol',JSON.stringify(VOL));localStorage.setItem('hlz_cmute',JSON.stringify([...SMUTE]));
+ localStorage.setItem('hlz_svol',JSON.stringify(SVOL));localStorage.setItem('hlz_smute',JSON.stringify([...SSMUTE]))}catch(e){}};
 const volOf=id=>typeof VOL[id]=='number'?VOL[id]:1;
-function audioSet(x){if(!x||!x.au)return;x.au.volume=Math.max(0,Math.min(1,volOf(x.u.id)));x.au.muted=!!((C&&(C.deaf||C.forceDeaf))||SMUTE.has(x.u.id))}
+const svolOf=id=>typeof SVOL[id]=='number'?SVOL[id]:1;
+function sAudioSet(x){if(!x||!x.sau)return;x.sau.volume=Math.max(0,Math.min(1,svolOf(x.u.id)));x.sau.muted=!!((C&&(C.deaf||C.forceDeaf))||SSMUTE.has(x.u.id))}
+function audioSet(x){if(!x)return;sAudioSet(x);if(!x.au)return;x.au.volume=Math.max(0,Math.min(1,volOf(x.u.id)));x.au.muted=!!((C&&(C.deaf||C.forceDeaf))||SMUTE.has(x.u.id))}
 let tstT=0;
 function toast(t){let e=$('tst');if(!e){e=document.createElement('div');e.id='tst';document.body.append(e)}e.textContent=t;e.classList.add('on');clearTimeout(tstT);tstT=setTimeout(()=>e.classList.remove('on'),2800)}
 const myState=()=>{const c=C;return c?{mute:c.mute?1:0,deaf:c.deaf?1:0,cam:c.vk?1:0,fm:c.forceMute?1:0,fd:c.forceDeaf?1:0}:{}};
@@ -1215,12 +1227,19 @@ function connTo(c,x){clearTimeout(x.ct);x.ct=setTimeout(()=>{if(C===c&&x.pc&&!x.
 function mkPc(c,x){
  const pc=x.pc=new RTCPeerConnection(ICE);
  c.st.getTracks().forEach(t=>pc.addTrack(t,c.st));if(c.vtr){x.vsend=pc.addTrack(c.vtr,c.st);vcodec(x,c.vk)}
+ if(c.satr&&c.sst){try{x.ssend=pc.addTrack(c.satr,c.sst)}catch(e){}}
  x.au=new Audio();x.au.autoplay=true;audioSet(x);
  tileFor(c,x);
  pc.onicecandidate=e=>{if(e.candidate){const d=e.candidate.toJSON();(x.cands=x.cands||[]).push(d);sg(x.u,'ice',d,c.cid)}};
  pc.ontrack=e=>{const m=e.streams[0]||new MediaStream([e.track]);
-  if(!x.au.srcObject)x.au.srcObject=m;
-  if(!x.vid.srcObject)x.vid.srcObject=m;
+  if(e.track.kind=='audio'&&x.au.srcObject){ // второй аудиотрек — звук демки, играем отдельно
+   if(!x.sau){x.sau=new Audio();x.sau.autoplay=true}
+   x.sau.srcObject=new MediaStream([e.track]);
+   sAudioSet(x);x.sau.play().catch(()=>{});
+  }else{
+   if(!x.au.srcObject)x.au.srcObject=m;
+   if(!x.vid.srcObject)x.vid.srcObject=m;
+  }
   audioSet(x);x.au.play().catch(()=>{});x.vid.play().catch(()=>{});
   e.track.onmute=e.track.onunmute=()=>{paintTile(x);drawCall()};
   paintTile(x);drawCall()};
@@ -1300,6 +1319,12 @@ function openPeerMenu(x,ev){
  its.push([sm?'✅':'⬜',sm?'Включить звук для себя':'Заглушить для себя',()=>{
   sm?SMUTE.delete(id):SMUTE.add(id);saveVol();audioSet(x);
   setTimeout(()=>openPeerMenu(x,{clientX:ex,clientY:ey}),0)}]);
+ // звук демки (показ экрана) — своя громкость и своё выключение
+ const ssm=SSMUTE.has(id);
+ its.push(['🖥','Звук демки: '+Math.round(svolOf(id)*100)+'%',()=>svolModal(x)]);
+ its.push([ssm?'✅':'⬜',ssm?'Включить звук демки':'Заглушить демку для себя',()=>{
+  ssm?SSMUTE.delete(id):SSMUTE.add(id);saveVol();audioSet(x);
+  setTimeout(()=>openPeerMenu(x,{clientX:ex,clientY:ey}),0)}]);
  if(host){
   its.push(['🚫','Выгнать из звонка',()=>kickModal(x),1]);
   if(st.fm)its.push(['🎤','Включить микрофон участнику',()=>ask('Включить микрофон '+x.u.nick+'?','Включить',()=>modAction(x,'unmute',''),'',false)]);
@@ -1314,6 +1339,12 @@ function volModal(x){
  const m=mod(`<h3>Громкость · ${esc(x.u.nick)}</h3><div style="color:var(--g);font-size:13px">Слышно только вам. Сохранится для следующих звонков.</div><input id="vr" type="range" min="0" max="100" step="5" value="${Math.round(volOf(id)*100)}" style="accent-color:var(--a);padding:0;border:0;background:none"><div id="vv" style="text-align:center;color:var(--g)">${Math.round(volOf(id)*100)}%</div><button id="vok">Готово</button>`,'modal2');
  const r=$('vr');r.oninput=()=>{VOL[id]=+r.value/100;$('vv').textContent=r.value+'%';saveVol();audioSet(x)};
  $('vok').onclick=()=>m.classList.add('hide');
+}
+function svolModal(x){
+ const id=x.u.id;
+ const m=mod(`<h3>Звук демки · ${esc(x.u.nick)}</h3><div style="color:var(--g);font-size:13px">Слышно только вам. Сохранится для следующих звонков.</div><input id="sr" type="range" min="0" max="100" step="5" value="${Math.round(svolOf(id)*100)}" style="accent-color:var(--a);padding:0;border:0;background:none"><div id="sv" style="text-align:center;color:var(--g)">${Math.round(svolOf(id)*100)}%</div><button id="sok">Готово</button>`,'modal2');
+ const r=$('sr');r.oninput=()=>{SVOL[id]=+r.value/100;$('sv').textContent=r.value+'%';saveVol();audioSet(x)};
+ $('sok').onclick=()=>m.classList.add('hide');
 }
 function kickModal(x){
  const m=mod(`<h3>Выгнать ${esc(x.u.nick)} из звонка?</h3><div style="color:var(--g);font-size:13px">«Один раз» — сможет вернуться сам. «До конца звонка» — не сможет вернуться, пока не начнётся новый звонок.</div><button id="k1">🚫 Выгнать один раз</button><button id="k2" style="background:#dc2626">🚫 До конца звонка</button><button id="k3" style="background:#3a3f4b">Отмена</button>`,'modal2');
@@ -1415,7 +1446,7 @@ function callEnd(notify){
  });
  c.P={};
  if(c.role=='out')logCall(c);
- if(c.st)c.st.getTracks().forEach(t=>t.stop());if(c.vtr)c.vtr.stop();
+ if(c.st)c.st.getTracks().forEach(t=>t.stop());if(c.vtr)c.vtr.stop();if(c.satr)c.satr.stop();
  ['lv','cf','cgrid','cpg'].forEach(i=>{const e=$(i);if(e)e.classList.add('hide')});
  const cl=$('call');cl.classList.remove('mini','grid');cl.classList.add('hide');
  $('cav').innerHTML='';$('cn').textContent='';$('cs').textContent='';$('ct').textContent='';$('cgn').textContent='';
@@ -1555,15 +1586,23 @@ function vcodec(x,kind){ // выбор кодека: демка — VP9 (чёт�
   const o=kind=='screen'?['vp9','h264','vp8']:['h264','vp9','vp8'],rk=c=>{const i=o.findIndex(n=>c.mimeType.toLowerCase().includes(n));return i<0?9:i};
   tr.setCodecPreferences(RTCRtpReceiver.getCapabilities('video').codecs.slice().sort((a,b)=>rk(a)-rk(b)))}catch(e){}}
 async function setVideo(kind){ // 'user' | 'environment' | 'screen' | null — трек уходит всем участникам звонка
- const c=C;if(!c)return;if(c.vtr){c.vtr.stop();c.vtr=null}
+ const c=C;if(!c)return;
+ if(c.vtr){c.vtr.stop();c.vtr=null}
+ if(c.satr){c.satr.stop();c.satr=null}
  const xs=Object.values(c.P).filter(x=>x.pc);
- if(!kind){xs.forEach(x=>{if(x.vsend){try{x.pc.removeTrack(x.vsend)}catch(e){}x.vsend=null}});c.vk=null;sendState();drawCall();locV();return}
+ if(!kind){xs.forEach(x=>{if(x.vsend){try{x.pc.removeTrack(x.vsend)}catch(e){}x.vsend=null}
+  if(x.ssend){try{x.pc.removeTrack(x.ssend)}catch(e){}x.ssend=null}});c.vk=null;sendState();drawCall();locV();return}
  let st;
- try{st=kind=='screen'?await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:60,max:60},width:{ideal:1920},height:{ideal:1080}},audio:false}):await navigator.mediaDevices.getUserMedia({video:{facingMode:kind,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}}})}
+ try{st=kind=='screen'?await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:60,max:60},width:{ideal:1920},height:{ideal:1080}},audio:true}):await navigator.mediaDevices.getUserMedia({video:{facingMode:kind,width:{ideal:1920},height:{ideal:1080},frameRate:{ideal:30}}})}
  catch(e){c.vk=null;drawCall();locV();return alert(kind=='screen'?'Не удалось начать показ экрана':'Нет доступа к камере')}
  const t=c.vtr=st.getVideoTracks()[0];if(kind!='screen')c.fp=kind;else t.contentHint='motion';
+ // звук демки (вкладка/система) — отдельным треком, чтобы у собеседника была своя громкость
+ const at=st.getAudioTracks()[0]||null;
+ if(at){c.satr=at;c.sst=new MediaStream([at])}
  t.onended=()=>{if(C===c&&c.vtr===t)setVideo(null)};
  for(const x of xs){if(x.vsend)await x.vsend.replaceTrack(t);else{x.vsend=x.pc.addTrack(t,c.st);vcodec(x,kind)}
+  if(x.ssend){try{x.pc.removeTrack(x.ssend)}catch(e){}x.ssend=null}
+  if(at&&c.sst){try{x.ssend=x.pc.addTrack(at,c.sst)}catch(e){}}
   try{const sp=x.vsend.getParameters();sp.encodings=sp.encodings&&sp.encodings.length?sp.encodings:[{}];const e0=sp.encodings[0],sc=kind=='screen';e0.maxBitrate=sc?12e6:4.5e6;e0.maxFramerate=sc?60:30;sp.degradationPreference=sc?'maintain-framerate':'balanced';await x.vsend.setParameters(sp)}catch(e){}}
  c.vk=kind;sendState();drawCall();locV();
 }
