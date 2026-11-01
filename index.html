@@ -894,6 +894,8 @@ async function pushSub(on){
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID)});
   const j=sub.toJSON();await sb.rpc('save_push',{e:j.endpoint,p:j.keys.p256dh,a:j.keys.auth})}catch(e){console.warn('push',e)}}
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const c=e.data&&e.data.open&&chats[e.data.open];if(c)open(c)});
+// показывать экран проверки уведомлений только тем, кто включил его 5 нажатиями по «Уведомления»
+function devShow(){const d=$('ntdev');if(!d)return;let on=false;try{on=localStorage.getItem('hlz_devpanel')=='1'}catch(e){}d.classList.toggle('hide',!on)}
 async function pushTest(){ // пошаговая проверка фоновых уведомлений
  const out=[],ok=(t,g,x)=>out.push([g?'✅':'❌',t,x||'']);
  let tail='Если всё ✅, тестовое уведомление уже пришло.',lg='';
@@ -1069,11 +1071,17 @@ function openSettings(){
  const st=$('st');
  st.innerHTML=`<div class="setp"><button class="lnk cl" id="stc">✕</button><div class="sn2"><div class="ni on">👤 <span>Учётная запись</span></div><div class="nj on" data-s="s1">Информация об учётной записи</div><div class="nj" data-s="s2">Пароль и безопасность</div><div class="ni" data-s="s3" style="cursor:pointer">🔔 <span>Уведомления</span></div><div class="nx"></div><div class="ni red" id="sx">🚪 <span>Выйти</span></div></div>
  <div class="sc"><h2 id="s1">Информация об учётной записи</h2><div class="sr"><b>Имя пользователя</b><span>${esc(me.username)}</span></div><hr style="border:0;border-top:1px solid #2a2f3a">
- <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке). В приложении HLZ — даже когда оно закрыто.</div><div class="sr"><b>Проверить уведомления</b><button class="i" id="ptb">Проверить</button></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s4">Приложение</h2><div class="sr"><b>Установить HLZ как приложение</b><button class="i" id="inst">Установить</button></div></div></div>`;
+ <h2 id="s2">Пароль и безопасность</h2><div class="sr"><b>Пароль</b><button class="i" id="spw">Изменить</button></div><div class="sr clk" id="sse"><b>Активные сеансы</b><span><span id="scnt">…</span> ›</span></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s3">Уведомления</h2><div class="sr"><b>Уведомления о сообщениях и звонках</b><button class="tg" id="ntp"></button></div><div style="color:var(--g);font-size:13px">Приходят, пока сайт открыт в браузере (можно в фоновой вкладке). В приложении HLZ — даже когда оно закрыто.</div><div id="ntdev" class="hide"><div class="sr"><b>Проверить уведомления</b><button class="i" id="ptb">Проверить</button></div></div><hr style="border:0;border-top:1px solid #2a2f3a"><h2 id="s4">Приложение</h2><div class="sr"><b>Установить HLZ как приложение</b><button class="i" id="inst">Установить</button></div></div></div>`;
  st.classList.remove('hide');cnt();
  st.onclick=e=>{if(e.target==st)closeSt()};$('stc').onclick=closeSt;
  st.querySelectorAll('.nj').forEach(n=>n.onclick=()=>{st.querySelectorAll('.nj').forEach(x=>x.classList.toggle('on',x==n));$(n.dataset.s).scrollIntoView({behavior:'smooth'})});
  ntgl($('ntp'));instBtn($('inst'));$('ptb').onclick=pushTest;st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
+ // скрытая проверка уведомлений: 5 быстрых нажатий по заголовку «Уведомления»
+ try{let devN=0,devT=0;const s3=$('s3');
+  if(s3)s3.onclick=()=>{const n=Date.now();devN=(n-devT<1600)?devN+1:1;devT=n;
+   if(devN>=5){devN=0;try{if(localStorage.getItem('hlz_devpanel'))localStorage.removeItem('hlz_devpanel');else localStorage.setItem('hlz_devpanel','1')}catch(e){}devShow()}};
+ }catch(e){}
+ devShow();
  $('sx').onclick=()=>ask('Выйти из аккаунта?','Выйти',async()=>{try{await sb.from('devices').delete().eq('id',getDev())}catch(e){}try{await pushSub(false)}catch(e){}await sb.auth.signOut();location.reload()});
 }
 $('bgear').onclick=openSettings;
