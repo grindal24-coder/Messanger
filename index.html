@@ -294,7 +294,7 @@ async function start(){
  const r=await sb.from('profiles').select('*').eq('id',user.id).single();
  if(r.error){if(!navigator.onLine||/fetch|network|timeout/i.test(r.error.message||''))offScreen();else noUser();return}me=r.data;
  $('auth').classList.add('hide');$('app').classList.remove('hide');
- await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}if(pendOpen){const c0=chats[pendOpen];pendOpen=null;history.replaceState(null,'',location.pathname);if(c0)open(c0)}if(nOn())pushSub(true);hlzSyncKey();
+ await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}if(pendOpen){const c0=chats[pendOpen];pendOpen=null;history.replaceState(null,'',location.pathname);if(c0)open(c0)}if(nOn())pushSub(true);hlzSyncKey();hlzFcm();
  ch=sb.channel('m').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async p=>{
   const m=p.new;if(!m||!m.id)return;const pid=m.group_id||(m.sender==me.id?m.receiver:m.sender);
   if(p.eventType=='UPDATE'){const a=msgs[pid]||[],i=a.findIndex(z=>z.id==m.id);if(i<0)return;
@@ -767,6 +767,18 @@ async function hlzSyncKey(){ // личный ключ канала уведом�
  }catch(e){window.hlzKeyErr=(e&&e.message)||String(e);console.warn('HLZ notifKey',e)}
 }
 function hlzCall(on){try{window.HLZ&&window.HLZ.call(!!on)}catch(e){}}
+// токен Firebase -> в базу, чтобы сервер мог прислать push даже закрытому приложению
+async function hlzFcm(tries){
+ if(!window.HLZ)return;
+ tries=(typeof tries=='number')?tries:8;
+ try{
+  const t=window.HLZ.fcmToken()||'';
+  if(!t){if(tries>1)setTimeout(()=>hlzFcm(tries-1),1500);return}
+  const r=await sb.rpc('save_fcm_token',{t});
+  if(r.error)throw r.error;
+  window.hlzFcmErr='';
+ }catch(e){window.hlzFcmErr=(e&&e.message)||String(e)}
+}
 window.hlzOpen=async id=>{ // открыть чат по id — нажатие на уведомление
  if(!id)return;
  try{
@@ -880,16 +892,15 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('messag
 async function pushTest(){ // пошаговая проверка фоновых уведомлений
  const out=[],ok=(t,g,x)=>out.push([g?'✅':'❌',t,x||'']);
  let tail='Если всё ✅, тестовое уведомление уже пришло.',lg='';
- if(window.HLZ){ // в приложении HLZ: проверяем саму оболочку, а не Web Push
+ if(window.HLZ){ // в приложении HLZ: проверяем Firebase-доставку
   await hlzSyncKey();
+  await hlzFcm();
   let st={};try{st=JSON.parse(window.HLZ.status()||'{}')}catch(e){}
   ok('Приложение HLZ '+(st.version||''),true,'страница: '+HLZ_PAGE_BUILD);
-  ok('Ключ канала уведомлений сохранён',st.key>0,st.key>0?'есть':'нет: выключи и снова включи «Уведомления» и повтори проверку');
-  if(!(st.key>0)&&window.hlzKeyErr)ok('Ошибка получения ключа',false,String(window.hlzKeyErr).slice(0,200));
-  ok('Служба приёма запущена',!!st.service,st.service?'работает':'не запущена — проверь разрешение на уведомления');
-  ok('Канал связи с сервером открыт',!!st.connected,st.connected?'да':'нет — придёт с задержкой до ~15 c через очередь');
-  lg=st.log||'';
-  if(st.error)ok('Последняя ошибка',false,String(st.error).slice(0,180));
+  ok('Токен Firebase получен',st.fcm>0,st.fcm>0?'есть':'нет: проверь app/google-services.json, интернет и Google Play Services');
+  if(window.hlzFcmErr)ok('Токен сохранён в базе',false,String(window.hlzFcmErr).slice(0,200));
+  else if(st.fcm>0)ok('Токен сохранён в базе',true,'');
+  ok('Ключ резервной очереди',st.key>0,st.key>0?'есть':'нет');
   ok('Уведомления разрешены в Android',!!st.notif,st.notif?'':'Настройки → Приложения → HLZ → Уведомления → Разрешить');
   ok('Вызовы поверх блокировки разрешены',!!st.fullscreen,st.fullscreen?'':'Настройки → Приложения → HLZ → Специальный доступ → Полноэкранные уведомления');
   try{window.HLZ.testNotif('HLZ','Тестовое уведомление ✅');ok('Локальное уведомление отправлено',true,'должно появиться сверху прямо сейчас')}
@@ -897,9 +908,13 @@ async function pushTest(){ // пошаговая проверка фоновых
   try{
    const t=await sb.functions.invoke('push',{body:{test:true}});
    if(t.error){let msg=t.error.message;try{msg=JSON.stringify(await t.error.context.json())}catch(e){}ok('Сервер отправил уведомление',false,'функция push не ответила: '+msg)}
-   else ok('Сервер отправил уведомление',!!(t.data&&t.data.ok),t.data?(t.data.error||JSON.stringify(t.data.app||t.data.results)):'нет ответа');
+   else{
+    const d=t.data||{},f=d.fcm||{};
+    ok('Сервер отправил уведомление',!!d.ok,'FCM доставлено: '+(f.sent||0)+(f.errors&&f.errors.length?(', ошибки: '+JSON.stringify(f.errors).slice(0,170)):''));
+   }
   }catch(e){ok('Сервер отправил уведомление',false,String(e))}
-  tail='Локальное уведомление показывает само приложение. Серверное идёт двумя путями: мгновенно по каналу и раз в ~15 c через очередь (setup_v12.sql). Если локальное пришло, а серверное нет — смотри журнал ниже и проверь, что развёрнуты setup_v11.sql, setup_v12.sql и функция push.';
+  lg=st.log||'';
+  tail='Уведомления идут через Firebase: сервер шлёт push, приложение показывает его само — даже когда закрыто. Если FCM доставлено 0 — проверь секрет FCM_SERVICE_ACCOUNT и таблицу fcm_tokens (setup_v14.sql).';
  } else {
   ok('Уведомления разрешены в браузере',window.Notification&&Notification.permission=='granted',window.Notification?Notification.permission:'не поддерживаются');
   let reg=null,sub=null;
