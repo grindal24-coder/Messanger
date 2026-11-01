@@ -871,13 +871,16 @@ async function pushSub(on){
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const c=e.data&&e.data.open&&chats[e.data.open];if(c)open(c)});
 async function pushTest(){ // пошаговая проверка фоновых уведомлений
  const out=[],ok=(t,g,x)=>out.push([g?'✅':'❌',t,x||'']);
- let tail='Если всё ✅, тестовое уведомление уже пришло.';
+ let tail='Если всё ✅, тестовое уведомление уже пришло.',lg='';
  if(window.HLZ){ // в приложении HLZ: проверяем саму оболочку, а не Web Push
   await hlzSyncKey();
   let st={};try{st=JSON.parse(window.HLZ.status()||'{}')}catch(e){}
   ok('Приложение HLZ '+(st.version||''),true,'');
   ok('Ключ канала уведомлений сохранён',st.key>0,st.key>0?'есть':'нет: выключи и снова включи «Уведомления» и повтори проверку');
   ok('Служба приёма запущена',!!st.service,st.service?'работает':'не запущена — проверь разрешение на уведомления');
+  ok('Канал связи с сервером открыт',!!st.connected,st.connected?'да':'нет — придёт с задержкой до ~15 c через очередь');
+  lg=st.log||'';
+  if(st.error)ok('Последняя ошибка',false,String(st.error).slice(0,180));
   ok('Уведомления разрешены в Android',!!st.notif,st.notif?'':'Настройки → Приложения → HLZ → Уведомления → Разрешить');
   ok('Вызовы поверх блокировки разрешены',!!st.fullscreen,st.fullscreen?'':'Настройки → Приложения → HLZ → Специальный доступ → Полноэкранные уведомления');
   try{window.HLZ.testNotif('HLZ','Тестовое уведомление ✅');ok('Локальное уведомление отправлено',true,'должно появиться сверху прямо сейчас')}
@@ -887,7 +890,7 @@ async function pushTest(){ // пошаговая проверка фоновых
    if(t.error){let msg=t.error.message;try{msg=JSON.stringify(await t.error.context.json())}catch(e){}ok('Сервер отправил уведомление',false,'функция push не ответила: '+msg)}
    else ok('Сервер отправил уведомление',!!(t.data&&t.data.ok),t.data?(t.data.error||JSON.stringify(t.data.app||t.data.results)):'нет ответа');
   }catch(e){ok('Сервер отправил уведомление',false,String(e))}
-  tail='Локальное уведомление показывает само приложение, серверное идёт по цепочке: сервер → канал notif-<ключ> → служба приёма. Если локальное пришло, а серверное нет — проверь setup_v11.sql и функцию push.';
+  tail='Локальное уведомление показывает само приложение. Серверное идёт двумя путями: мгновенно по каналу и раз в ~15 c через очередь (setup_v12.sql). Если локальное пришло, а серверное нет — смотри журнал ниже и проверь, что развёрнуты setup_v11.sql, setup_v12.sql и функция push.';
  } else {
   ok('Уведомления разрешены в браузере',window.Notification&&Notification.permission=='granted',window.Notification?Notification.permission:'не поддерживаются');
   let reg=null,sub=null;
@@ -902,7 +905,9 @@ async function pushTest(){ // пошаговая проверка фоновых
   }
  }
  const m=mod('<h3>Проверка уведомлений</h3>'+out.map(([i,t,x])=>`<div style="padding:6px 0">${i} ${esc(t)}${x?`<div style="color:var(--g);font-size:12px;word-break:break-word">${esc(x)}</div>`:''}</div>`).join('')
-  +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div><button class="i" id="ptx">Закрыть</button>`);
+  +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
+  +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:170px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`:'')
+  +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
 }
 // --- установка как приложение (PWA) ---
@@ -1241,12 +1246,11 @@ function tileFor(c,x){
  t.innerHTML=`<div class="tav">${x.u.avatar?`<img src="${esc(x.u.avatar)}" alt="">`:`<span>${esc((String(x.u.nick||'?')[0]||'?').toUpperCase())}</span>`}</div><b class="nn">${esc(x.u.nick||'')}</b><span class="md"></span>`;
  const v=document.createElement('video');v.playsInline=true;v.autoplay=true;v.muted=true;t.prepend(v);
  x.vid=v;x.tile=t;
- t.onclick=()=>tileTap(x);
  t.oncontextmenu=e=>{e.preventDefault();openPeerMenu(x,e)};
  holdPress(t,e=>openPeerMenu(x,e));
  let dg=null;
  t.addEventListener('pointerdown',e=>{
-  const cc=C;if(!cc||cc.fs!=x.u.id||((cc.vz&&cc.vz[x.u.id])||1)<=1)return;
+  const cc=C;if(!cc||((cc.vz&&cc.vz[x.u.id])||1)<=1)return;
   if(e.pointerType=='mouse'&&e.button)return;
   const p=(cc.vp&&cc.vp[x.u.id])||{x:0,y:0};
   dg={id:e.pointerId,x:e.clientX,y:e.clientY,px:p.x,py:p.y,moved:0};
@@ -1258,9 +1262,9 @@ function tileFor(c,x){
   if(Math.abs(dx)+Math.abs(dy)>6)dg.moved=1;
   if(dg.moved){e.preventDefault();panTile(x,dg.px+dx,dg.py+dy)}
  });
- const endDrag=e=>{if(!dg||(e&&e.pointerId!=dg.id))return;if(dg.moved)t._panned=Date.now();dg=null};
+ const endDrag=e=>{if(!dg||(e&&e.pointerId!=dg.id))return;dg=null};
  t.addEventListener('pointerup',endDrag);t.addEventListener('pointercancel',endDrag);
- pinch(t,()=>!!(C&&C.fs==x.u.id),f=>{const cc=C;if(!cc)return;const k=Math.max(1,Math.min(6,(cc.vz[x.u.id]||1)*f));cc.vz[x.u.id]=k;const p=(cc.vp&&cc.vp[x.u.id])||{x:0,y:0};panTile(x,p.x,p.y)});
+ pinch(t,()=>!!C,f=>{const cc=C;if(!cc)return;const k=Math.max(1,Math.min(6,(cc.vz[x.u.id]||1)*f));cc.vz[x.u.id]=k;const p=(cc.vp&&cc.vp[x.u.id])||{x:0,y:0};panTile(x,p.x,p.y)});
  return t;
 }
 function paintTile(x){
@@ -1273,14 +1277,7 @@ function paintTile(x){
  if(c&&c.acc&&x.pc&&!x.live)ic.push('<i title="Соединение…">…</i>');
  t.querySelector('.md').innerHTML=ic.join('');
  const fs=!!(c&&c.fs==x.u.id);t.classList.toggle('fs',fs);
- if(x.vid){const k=fs?(c.vz[x.u.id]||1):1,p=(fs&&c.vp&&c.vp[x.u.id])||{x:0,y:0};x.vid.style.transform=(k>1||p.x||p.y)?'translate('+p.x+'px,'+p.y+'px) scale('+k+')':''}
-}
-function tileTap(x){
- const c=C;if(!c||!x.vid||!x.vid.srcObject)return;
- if(Date.now()-((x.tile&&x.tile._panned)||0)<350)return;
- if(!x.vid.srcObject.getVideoTracks().some(q=>q.readyState=='live'&&!q.muted))return;
- c.fs=c.fs==x.u.id?null:x.u.id;c.vz[x.u.id]=1;(c.vp||(c.vp={}))[x.u.id]={x:0,y:0};
- drawCall();
+ if(x.vid){const k=(c&&c.vz&&c.vz[x.u.id])||1,p=(c&&c.vp&&c.vp[x.u.id])||{x:0,y:0};x.vid.style.transform=(k>1||p.x||p.y)?'translate('+p.x+'px,'+p.y+'px) scale('+k+')':''}
 }
 function holdPress(el,fn){
  let tm=0,moved=0,sx=0,sy=0,hit=0,sup=0;
@@ -1452,7 +1449,8 @@ async function onSig(p){
   const n=C={cid:p.cid,P:{},role:'in',roster:p.d.roster||[],offer:p.d.sdp,gn:p.d.gn,gid:p.d.gid,host:p.d.host,
    mute:0,deaf:0,since:Date.now(),page:0,fs:null,vz:{}};
   const y=peer(n,u);y.st=p.d.st||null;
-  ringStart(1);drawCall();if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
+  // в приложении при свёрнутом окне звонит телефон (нативная служба), а не страница — иначе звук двойной
+  if(!(window.HLZ&&document.hidden))ringStart(1);drawCall();if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
   n.to=setTimeout(()=>{if(C===n&&!n.acc)callEnd(true)},30000);
   // нажали «Принять» в уведомлении — подключаемся сразу, без второго нажатия
   if(hlzAcc&&Date.now()-hlzAcc<60000){hlzAcc=0;setTimeout(()=>{if(C===n&&!n.acc)callAcc()},200)}
