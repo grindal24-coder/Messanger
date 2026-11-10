@@ -30,6 +30,8 @@ button.i{background:var(--p2);padding:9px 12px}
 .top{display:flex;gap:8px;padding:10px;padding-top:max(10px,env(safe-area-inset-top))}
 #list{flex:1;overflow:auto}
 .row{display:flex;gap:10px;align-items:center;padding:10px 14px;cursor:pointer}
+.row.muted{opacity:.5;filter:grayscale(.5)}
+.row .mz{margin-left:6px;font-size:12px;opacity:.9}
 .row:hover{background:var(--p2)}
 .row .n{font-weight:600}.row .s{color:var(--g);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row div{min-width:0}
@@ -166,6 +168,11 @@ button.i{background:var(--p2);padding:9px 12px}
 #tst{position:fixed;left:50%;top:max(70px,env(safe-area-inset-top));transform:translate(-50%,-8px);background:#000d;border:1px solid #fff2;color:#fff;font-size:13px;padding:9px 14px;border-radius:12px;z-index:70;opacity:0;pointer-events:none;transition:.2s;max-width:86vw;text-align:center}
 #tst.on{opacity:1;transform:translate(-50%,0)}
 #call{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;background:#0a0c10;padding:0}
+/* звонок на заблокированном экране: виден только вызов, чаты недоступны */
+body.lockcall #side,body.lockcall #ph,body.lockcall #chat,body.lockcall #st,body.lockcall #pp,body.lockcall #sheet,body.lockcall #cbann,body.lockcall #modal,body.lockcall #modal2,body.lockcall #cm{display:none!important}
+body.lockcall #call{display:flex!important}
+body.lockcall #chd,body.lockcall #cmin,body.lockcall #cf{display:none!important}
+body.lockcall #cinfo{padding-top:40px}
 #chd{position:absolute;top:max(14px,env(safe-area-inset-top));left:14px;display:flex;align-items:center;gap:10px;z-index:6;max-width:66vw}
 #chd #cmin{position:static}
 #ct{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px;color:#fff;min-width:34px}
@@ -294,7 +301,7 @@ async function start(){
  const r=await sb.from('profiles').select('*').eq('id',user.id).single();
  if(r.error){if(!navigator.onLine||/fetch|network|timeout/i.test(r.error.message||''))offScreen();else noUser();return}me=r.data;
  $('auth').classList.add('hide');$('app').classList.remove('hide');
- await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}if(pendOpen){const c0=chats[pendOpen];pendOpen=null;history.replaceState(null,'',location.pathname);if(c0)open(c0)}if(nOn())pushSub(true);hlzSyncKey();hlzFcm();
+ await load();clean();presence();callInit();barUpdate();devBeat();setInterval(devBeat,30000);splashOut();if(pendJoin){const g=pendJoin;pendJoin=null;joinLink(g)}if(pendOpen){const c0=chats[pendOpen];pendOpen=null;history.replaceState(null,'',location.pathname);if(c0)open(c0)}if(nOn())pushSub(true);hlzSyncKey();hlzFcm();syncSilence();
  ch=sb.channel('m').on('postgres_changes',{event:'*',schema:'public',table:'messages'},async p=>{
   const m=p.new;if(!m||!m.id)return;const pid=m.group_id||(m.sender==me.id?m.receiver:m.sender);
   if(p.eventType=='UPDATE'){const a=msgs[pid]||[],i=a.findIndex(z=>z.id==m.id);if(i<0)return;
@@ -324,7 +331,18 @@ const on=new Set();
 const ava=(u,s)=>`<span class="aw">${u.avatar?`<img class="av" src="${u.avatar}">`:`<div class="av">${esc((u.nick||'?')[0].toUpperCase())}</div>`}${u.id&&me&&(s||u.id!=me.id)&&on.has(u.id)?'<i class="dot"></i>':''}</span>`;
 function rows(a,sub){
  $('list').innerHTML=a.length?'':'<div class="empty">Чатов нет</div>';
- a.forEach(u=>{const d=document.createElement('div');d.className='row';d.innerHTML=ava(u)+`<div><div class="n">${esc(u.nick)}</div><div class="s">${sub(u)}</div></div>${bd(u)}`;d.onclick=()=>open(u);$('list').append(d)});
+ a.forEach(u=>{const mz=chatMuted(u.id),d=document.createElement('div');
+  d.className='row'+(mz?' muted':'');
+  d.innerHTML=ava(u)+`<div><div class="n">${esc(u.nick)}${mz?'<span class="mz" title="Уведомления выключены">🔕</span>':''}</div><div class="s">${sub(u)}</div></div>${bd(u)}`;
+  d.onclick=()=>open(u);
+  d.oncontextmenu=e=>{e.preventDefault();chatCtx(u,e)};
+  try{holdPress(d,e=>chatCtx(u,e))}catch(e){}
+  $('list').append(d)});
+}
+// правый клик (или долгое нажатие) по чату в списке
+function chatCtx(u,ev){
+ const ex=(ev&&ev.clientX)||innerWidth/2,ey=(ev&&ev.clientY)||innerHeight/2;
+ pop(ex,ey,[['🔔','Уведомления',()=>setTimeout(()=>muteMenu(u.id,{clientX:ex,clientY:ey}),0)]]);
 }
 const lt=u=>msgs[u.id]&&msgs[u.id].length?Date.parse(msgs[u.id].at(-1).created_at):u.created_at?Date.parse(u.created_at):0;
 const hidn=u=>{const q=prefs[u.id];return q&&q.hidden_at&&Date.parse(q.hidden_at)>=lt(u)};
@@ -343,6 +361,7 @@ let st;$('q').oninput=()=>{clearTimeout(st);st=setTimeout(async()=>{
 
 // ---------- чат ----------
 function open(u){
+ if(LOCKED)return; // на заблокированном экране в чаты не входим
  cur=u;setCtx(null);pend.length=0;showPv();if(!chats[u.id])chats[u.id]=u;
  $('q').value='';list();
  $('ph').classList.add('hide');$('chat').classList.remove('hide');document.body.classList.add('open');
@@ -747,7 +766,54 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden||!C)return;
  const lv=$('lv');if(lv.srcObject)lv.play().catch(()=>{});drawCall()});
 // --- уведомления ---
 const nOn=()=>{try{if(window.HLZ)return localStorage.getItem('hlz_notif')!='0';return localStorage.getItem('hlz_notif')=='1'&&window.Notification&&Notification.permission=='granted'}catch(e){return false}};
-async function notify(title,body,tag){if(!nOn())return;try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r&&r.showNotification)return r.showNotification(title,{body,tag,renotify:true});new Notification(title,{body,tag})}catch(e){}}
+// ---------- «не беспокоить» и отключение уведомлений для чатов ----------
+let DND={on:false,hours:3,until:0,sched:[]},MUTE={};
+try{DND=Object.assign({on:false,hours:3,until:0,sched:[]},JSON.parse(localStorage.getItem('hlz_dnd')||'{}'))}catch(e){}
+try{MUTE=JSON.parse(localStorage.getItem('hlz_mute')||'{}')||{}}catch(e){}
+const DAYN=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function saveDnd(){try{localStorage.setItem('hlz_dnd',JSON.stringify(DND));localStorage.setItem('hlz_mute',JSON.stringify(MUTE))}catch(e){}syncSilence()}
+function dndOn(){if(!DND.on)return false;if(DND.until&&Date.now()>=DND.until){DND.on=false;DND.until=0;saveDnd();return false}return true}
+function schedNow(){const d=new Date(),day=d.getDay(),m=d.getHours()*60+d.getMinutes();
+ for(const s of (DND.sched||[])){if(!(s.days||[]).includes(day))continue;
+  const p=t=>{const a=String(t||'').split(':');return (+a[0]||0)*60+(+a[1]||0)};
+  const f=p(s.from),to=p(s.to);if(f<=to){if(m>=f&&m<to)return true}else if(m>=f||m<to)return true}
+ return false}
+function silentNow(){try{return dndOn()||schedNow()}catch(e){return false}}
+function muteOf(id){const v=MUTE[id];if(v==null)return 0;if(v&&Date.now()>=v){delete MUTE[id];saveDnd();return 0}return v===0?-1:v}
+function chatMuted(id){return !!id&&muteOf(id)!==0}
+function syncSilence(){try{window.HLZ&&window.HLZ.settings(JSON.stringify({dnd:{on:!!DND.on,until:DND.until||0,sched:DND.sched||[]},mutes:MUTE}))}catch(e){}}
+// меню «на сколько выключить уведомления» для одного чата
+const MDUR=[['1 минута',60],['5 минут',300],['15 минут',900],['30 минут',1800],['1 час',3600],['2 часа',7200],['4 часа',14400],['8 часов',28800],['10 часов',36000],['16 часов',57600],['20 часов',72000],['24 часа',86400]];
+function muteMenu(id,ev){
+ const ex=(ev&&ev.clientX)||innerWidth/2,ey=(ev&&ev.clientY)||innerHeight/2;
+ const c=$('cm');c.innerHTML='';
+ const head=document.createElement('div');head.style.cssText='padding:8px 12px;color:var(--g);font-size:12px';head.textContent='Уведомления этого чата';
+ c.append(head);
+ const add=(icon,label,fn,red)=>{const d=document.createElement('div');if(red)d.className='red';
+  d.innerHTML=`<span>${icon}</span><span>${label}</span>`;d.onclick=ev2=>{ev2.stopPropagation();c.classList.add('hide');fn()};c.append(d)};
+ if(chatMuted(id))add('🔔','Включить уведомления',()=>{delete MUTE[id];saveDnd();list();if(cur&&cur.id==id)pillUpd();toast('Уведомления чата включены')});
+ MDUR.forEach(([n,s])=>add('🔕',n,()=>{
+  MUTE[id]=Date.now()+s*1000;saveDnd();list();if(cur&&cur.id==id)pillUpd();
+  toast('Уведомления выключены: '+n);
+ }));
+ add('♾️','Навсегда',()=>{MUTE[id]=0;saveDnd();list();if(cur&&cur.id==id)pillUpd();toast('Уведомления выключены навсегда')});
+ add('✏️','Своё время',()=>{
+  const box=document.createElement('div');box.style.cssText='padding:8px 12px;display:flex;flex-direction:column;gap:8px';
+  box.innerHTML='<input id="mti" type="number" min="0" step="0.5" placeholder="Введите время в часах" style="margin:0"><button class="i" id="mto" style="width:100%">Выключить уведомления</button>';
+  c.append(box);
+  box.querySelector('#mto').onclick=ev3=>{ev3.stopPropagation();
+   const h=parseFloat(box.querySelector('#mti').value);
+   if(!isFinite(h)||h<=0)return alert('Введите время в часах, например 1.5');
+   MUTE[id]=Date.now()+Math.round(h*3600*1000);c.classList.add('hide');saveDnd();list();if(cur&&cur.id==id)pillUpd();
+   toast('Уведомления выключены на '+h+' ч')};
+  setTimeout(()=>{const e=box.querySelector('#mti');if(e)e.focus()},50);
+ });
+ c.classList.remove('hide');
+ c.style.left=Math.max(8,Math.min(ex,innerWidth-c.offsetWidth-8))+'px';
+ c.style.top=Math.max(8,Math.min(ey,innerHeight-c.offsetHeight-8))+'px';
+}
+async function notify(title,body,tag){if(!nOn())return;if(silentNow())return;const cid=tag&&tag[0]=='m'?tag.slice(1):null;if(chatMuted(cid))return;
+ try{const r=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(r&&r.showNotification)return r.showNotification(title,{body,tag,renotify:true});new Notification(title,{body,tag})}catch(e){}}
 function ntgl(b){if(!b)return;b.classList.toggle('on',nOn());b.onclick=async()=>{
  if(b.classList.contains('on')){try{localStorage.setItem('hlz_notif','0')}catch(e){}b.classList.remove('on');pushSub(false);hlzSyncKey();return}
  if(window.HLZ){try{localStorage.setItem('hlz_notif','1')}catch(e){}b.classList.add('on');hlzSyncKey();return}
@@ -806,6 +872,24 @@ window.hlzBack=()=>{ // «назад»: закрыть меню/окно/чат;
  return false;
 };
 window.hlzPip=on=>{try{document.documentElement.classList.toggle('pip',!!on)}catch(e){}};
+// ---------- звонок поверх заблокированного экрана: только вызов, без доступа к чатам ----------
+let LOCKED=false;
+window.hlzLockedCall=on=>{
+ LOCKED=!!on;
+ try{document.body.classList.toggle('lockcall',LOCKED)}catch(e){}
+ if(LOCKED){
+  try{closeSt()}catch(e){}
+  try{$('pp').classList.add('hide')}catch(e){}
+  try{$('cm').classList.add('hide')}catch(e){}
+  try{$('modal').classList.add('hide');$('modal2').classList.add('hide')}catch(e){}
+ }
+};
+// звонящий сбросил вызов — прекращаем звонить
+window.hlzCancelCall=cid=>{
+ const c=C;
+ if(c&&c.role=='in'&&!c.acc&&(!cid||c.cid==cid)){stopRing();callEnd(false)}
+ else if(!c){stopRing()}
+};
 // входящий звонок в приложении — баннер сверху, как уведомление
 let hlzDecl=(/[#&]d=1/.test(location.hash))?Date.now():0;
 window.hlzDecline=()=>{
@@ -819,7 +903,7 @@ window.hlzAccept=()=>{
 };
 function hlzCallBanner(){
  const b=$('cbann');if(!b)return;
- const c=C,on=!!(window.HLZ&&c&&c.role=='in'&&!c.acc&&!c.copen);
+ const c=C,on=!!(window.HLZ&&c&&c.role=='in'&&!c.acc&&!c.copen&&!c.quiet);
  if(!on){
   b.classList.remove('on');
   setTimeout(()=>{if(!b.classList.contains('on'))b.classList.add('hide')},260);
@@ -1066,6 +1150,74 @@ function pwModal(){
   if(c.error)return bad('Текущий пароль неверный');const r=await sb.auth.updateUser({password:$('np').value});if(r.error)return bad(r.error.message);
   e.style.color='#4ade80';e.textContent='Пароль изменён';setTimeout(()=>m.classList.add('hide'),900)};
 }
+// ---------- настройки: «Не беспокоить» и расписания ----------
+function notifPanel(){
+ const on=dndOn();
+ const sch=(DND.sched||[]);
+ const m=mod(
+  '<h3>Уведомления</h3>'+
+  '<div class="sr"><b>Не беспокоить</b><button class="tg'+(on?' on':'')+'" id="dndt"></button></div>'+
+  '<div class="sr"><b>На время</b><span>'+((DND.hours&&DND.hours>0)?DND.hours+' ч':'не ограничено')+'</span><button class="i" id="dndh" style="width:auto;padding:0 12px">Изменить</button></div>'+
+  '<div style="color:var(--g);font-size:13px">Пока включено, сообщения и звонки не беспокоят'+(DND.until?' — выключится само':'')+'.</div>'+
+  '<h2 style="margin:18px 0 6px">По расписанию</h2>'+
+  (sch.length?'':'<div style="color:var(--g);font-size:13px">Пока нет ни одного расписания</div>')+
+  '<div id="dnds"></div>'+
+  '<button class="i" id="dnda" style="margin-top:8px">Добавить расписание</button>'+
+  '<button class="i" id="ndx" style="background:#3a3f4b;margin-top:10px">Закрыть</button>','modal2');
+ const box=$('dnds');
+ sch.forEach((s,i)=>{
+  const d=document.createElement('div');d.className='sr';
+  const days=(s.days||[]).slice().sort().map(x=>DAYN[x]).join(', ')||'каждый день';
+  d.innerHTML=`<b>${esc(days)}</b><span>${esc(s.from)}–${esc(s.to)}</span>`;
+  const del=document.createElement('button');del.className='lnk';del.textContent='✕';del.title='Удалить';
+  del.onclick=ev=>{ev.stopPropagation();DND.sched.splice(i,1);saveDnd();notifPanel()};
+  d.append(del);
+  d.onclick=()=>schedEdit(i);
+  box.append(d);
+ });
+ $('ndx').onclick=()=>m.classList.add('hide');
+ $('dndt').onclick=()=>{
+  if(DND.on){DND.on=false;DND.until=0}
+  else{DND.on=true;DND.until=(DND.hours&&DND.hours>0)?Date.now()+DND.hours*3600*1000:0}
+  saveDnd();notifPanel();
+ };
+ $('dndh').onclick=ev=>{
+  ev.stopPropagation();
+  const row=$('dndh').parentNode;
+  row.innerHTML='<input id="dndhi" type="number" min="0" step="0.5" value="'+(DND.hours||0)+'" placeholder="Часов" style="margin:0;width:90px"><button class="i" id="dndhs" style="width:auto;padding:0 12px">ОК</button>';
+  row.querySelector('#dndhs').onclick=ev2=>{
+   ev2.stopPropagation();
+   const h=parseFloat(row.querySelector('#dndhi').value)||0;
+   DND.hours=h;
+   if(DND.on)DND.until=h>0?Date.now()+h*3600*1000:0;
+   saveDnd();notifPanel();
+  };
+ };
+ $('dnda').onclick=()=>schedEdit(-1);
+}
+function schedEdit(idx){
+ const s=(idx>=0&&DND.sched[idx])?DND.sched[idx]:{days:[1,2,3,4,5],from:'22:00',to:'08:00'};
+ const cur=new Set(s.days||[]);
+ const m=mod('<h3>'+(idx>=0?'Изменить расписание':'Новое расписание')+'</h3>'+
+  '<div style="color:var(--g);font-size:13px">Выберите дни и время, когда не беспокоить.</div>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0" id="sdays"></div>'+
+  '<div class="sr"><b>С</b><input type="time" id="sfrom" value="'+esc(s.from)+'" style="width:auto;margin:0"></div>'+
+  '<div class="sr"><b>До</b><input type="time" id="sto" value="'+esc(s.to)+'" style="width:auto;margin:0"></div>'+
+  '<button id="sok">Сохранить</button><button id="scn" style="background:#3a3f4b">Отмена</button>','modal2');
+ DAYN.forEach((d,i)=>{const b=document.createElement('button');b.className='i';b.textContent=d;
+  b.style.cssText='width:auto;padding:6px 10px;'+(cur.has(i)?'background:var(--a)':'background:#3a3f4b');
+  b.onclick=ev=>{ev.stopPropagation();if(cur.has(i))cur.delete(i);else cur.add(i);
+   b.style.background=cur.has(i)?'var(--a)':'#3a3f4b'};
+  $('sdays').append(b)});
+ $('scn').onclick=()=>m.classList.add('hide');
+ $('sok').onclick=()=>{
+  const from=$('sfrom').value||'22:00',to=$('sto').value||'08:00';
+  if(!cur.size)return alert('Выберите хотя бы один день');
+  const item={days:[...cur].sort(),from,to};
+  if(idx>=0)DND.sched[idx]=item;else DND.sched.push(item);
+  saveDnd();notifPanel();
+ };
+}
 function closeSt(){$('st').classList.add('hide')}
 function openSettings(){
  const st=$('st');
@@ -1075,7 +1227,10 @@ function openSettings(){
  st.classList.remove('hide');cnt();
  st.onclick=e=>{if(e.target==st)closeSt()};$('stc').onclick=closeSt;
  st.querySelectorAll('.nj').forEach(n=>n.onclick=()=>{st.querySelectorAll('.nj').forEach(x=>x.classList.toggle('on',x==n));$(n.dataset.s).scrollIntoView({behavior:'smooth'})});
- ntgl($('ntp'));instBtn($('inst'));$('ptb').onclick=pushTest;st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>$(n.dataset.s).scrollIntoView({behavior:'smooth'}));$('spw').onclick=pwModal;$('sse').onclick=sessions;
+ ntgl($('ntp'));instBtn($('inst'));$('ptb').onclick=pushTest;st.querySelectorAll('.ni[data-s]').forEach(n=>n.onclick=()=>{
+  if(n.dataset.s=='s3'){closeSt();notifPanel();return}
+  $(n.dataset.s).scrollIntoView({behavior:'smooth'})
+ });$('spw').onclick=pwModal;$('sse').onclick=sessions;
  // скрытая проверка уведомлений: 5 быстрых нажатий по заголовку «Уведомления»
  try{let devN=0,devT=0;const s3=$('s3');
   if(s3)s3.onclick=()=>{const n=Date.now();devN=(n-devT<1600)?devN+1:1;devT=n;
@@ -1125,7 +1280,7 @@ function usrInfo(u,full){
  if(u.bg)bgUrl(u.bg).then(url=>{if(url)m.firstChild.style.cssText='min-height:340px;background:linear-gradient(#0004,#0004),url('+url+') center/cover'});
  if(u.id==me.id)return;refreshSeen(u).then(()=>{const e=$('usn');if(e)e.textContent=seenTxt(u)});
  $('dt').onclick=e=>{e.stopPropagation();const r=e.target.getBoundingClientRect();
-  const bl=prefs[u.id]&&prefs[u.id].blocked;pop(r.left-170,r.bottom,[['🚫',bl?'Разблокировать':'Заблокировать',()=>setPref(u.id,{blocked:!bl}),1],
+  const bl=prefs[u.id]&&prefs[u.id].blocked;pop(r.left-170,r.bottom,[['🔔','Уведомления',()=>setTimeout(()=>muteMenu(u.id,{clientX:r.left-170,clientY:r.bottom}),0)],['🚫',bl?'Разблокировать':'Заблокировать',()=>setPref(u.id,{blocked:!bl}),1],
    ...(full?[['💥','Удалить чат для всех',()=>ask('Удалить чат для всех?','Удалить',async()=>{const x=await sb.rpc('wipe_dm',{peer:u.id});if(x.error)return alert(x.error.message);msgs[u.id]=[];close();list()},'Все сообщения исчезнут у обоих.'),1],['🗑️','Удалить чат (только у меня)',()=>ask('Удалить чат у себя?','Удалить',()=>{setPref(u.id,{hidden_at:new Date().toISOString()});close()},'У собеседника он останется.')]]:[])])};
 }
 function grpInfo(){
@@ -1139,7 +1294,7 @@ function grpInfo(){
  $('gi').onclick=()=>inviteUI(g);
  $('cpy').onclick=async()=>{const l=location.origin+location.pathname+'#g='+g.id;try{await navigator.clipboard.writeText(l);$('cpy').textContent='✓ Скопировано';setTimeout(()=>{const b=$('cpy');if(b)b.textContent='Копировать'},1500)}catch(e){prompt('Скопируйте ссылку',l)}};
  $('dt').onclick=e=>{e.stopPropagation();const r=e.target.getBoundingClientRect();
-  pop(r.left-200,r.bottom,[['🚪','Выйти из группы',()=>ask('Выйти из группы «'+g.nick+'»?','Выйти',async()=>{const x=await sb.rpc('leave_group',{gid:g.id});if(x.error)return alert(x.error.message);close();await loadGroups()},own?'Владельцем станет другой участник.':''),1],
+  pop(r.left-200,r.bottom,[['🔔','Уведомления',()=>setTimeout(()=>muteMenu(g.id,{clientX:r.left-200,clientY:r.bottom}),0)],['🚪','Выйти из группы',()=>ask('Выйти из группы «'+g.nick+'»?','Выйти',async()=>{const x=await sb.rpc('leave_group',{gid:g.id});if(x.error)return alert(x.error.message);close();await loadGroups()},own?'Владельцем станет другой участник.':''),1],
     ...(own?[['💥','Удалить группу для всех',()=>ask('Удалить группу для всех?','Удалить',async()=>{const x=await sb.rpc('delete_group',{gid:g.id});if(x.error)return alert(x.error.message);close();await loadGroups()},'Группа и вся переписка исчезнут у всех участников.'),1]]:[]),
    ['🗑️','Удалить чат (только у меня)',()=>ask('Удалить чат у себя?','Удалить',()=>{setPref(g.id,{hidden_at:new Date().toISOString()});close()},'У остальных участников он останется.')]])};
 }
@@ -1492,6 +1647,13 @@ async function callAcc(){
 }
 function callEnd(notify){
  const c=C;if(!c)return;C=null;dead.add(c.cid);clearTimeout(c.to);stopRing();wlOff();hlzCall(false);
+ // звонок так и не соединился — сообщаем второй стороне, чтобы у неё перестал играть рингтон
+ if(!c.t0){
+  try{
+   const ids=c.role=='out'?(c.roster||[]).filter(x=>x!=me.id):(c.from?[c.from]:[]);
+   if(ids.length)sb.functions.invoke('push',{body:{callCancel:true,ids,cid:c.cid}}).catch(()=>{});
+  }catch(e){}
+ }
  Object.values(c.P).forEach(x=>{
   clearTimeout(x.ct);clearTimeout(x.rt);clearInterval(x.rs);
   if(notify)sg(x.u,'end',null,c.cid);
@@ -1507,6 +1669,8 @@ function callEnd(notify){
  $('cav').innerHTML='';$('cn').textContent='';$('cs').textContent='';$('ct').textContent='';$('cgn').textContent='';
  hlzCallBanner();
  if(c.gid&&roomId==c.gid){if(cur&&cur.id==roomId){roomTrack();renderBar()}else roomClose()}else if(room){roomTrack();renderBar()}
+ // звонок был открыт поверх заблокированного экрана — возвращаемся на экран блокировки
+ if(LOCKED){try{window.HLZ.lockedEnd()}catch(e){}}
 }
 async function answerNew(c,u,p){
  const y=peer(c,u);y.st=p.d.st||null;mkPc(c,y);
@@ -1534,11 +1698,15 @@ async function onSig(p){
   }
   if(c)return sg(p.from,'busy',null,p.cid);
   const u=await prof(p.from);if(!u||C)return;
-  const n=C={cid:p.cid,P:{},role:'in',roster:p.d.roster||[],offer:p.d.sdp,gn:p.d.gn,gid:p.d.gid,host:p.d.host,
+  const n=C={cid:p.cid,P:{},role:'in',from:p.from,roster:p.d.roster||[],offer:p.d.sdp,gn:p.d.gn,gid:p.d.gid,host:p.d.host,
    mute:0,deaf:0,since:Date.now(),page:0,fs:null,vz:{}};
+  // «не беспокоить» или выключенные уведомления этого чата — не звоним и не показываем баннер
+  n.quiet=(silentNow()||chatMuted(p.from))?1:0;
   const y=peer(n,u);y.st=p.d.st||null;
   // в приложении при свёрнутом окне звонит телефон (нативная служба), а не страница — иначе звук двойной
-  if(!(window.HLZ&&document.hidden))ringStart(1);drawCall();if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
+  if(!n.quiet&&!(window.HLZ&&document.hidden))ringStart(1);drawCall();
+  if(n.quiet){toast('Тихий вызов: включён режим «не беспокоить» или выключены уведомления чата')}
+  else if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
   n.to=setTimeout(()=>{if(C===n&&!n.acc)callEnd(true)},30000);
   // нажали «Принять» в уведомлении — подключаемся сразу, без второго нажатия
   if(hlzAcc&&Date.now()-hlzAcc<60000){hlzAcc=0;setTimeout(()=>{if(C===n&&!n.acc)callAcc()},200)}
@@ -1663,7 +1831,7 @@ async function setVideo(kind){ // 'user' | 'environment' | 'screen' | null — �
   try{const sp=x.vsend.getParameters();sp.encodings=sp.encodings&&sp.encodings.length?sp.encodings:[{}];const e0=sp.encodings[0],sc=kind=='screen';e0.maxBitrate=sc?12e6:4.5e6;e0.maxFramerate=sc?60:30;sp.degradationPreference=sc?'maintain-framerate':'balanced';await x.vsend.setParameters(sp)}catch(e){}}
  c.vk=kind;sendState();drawCall();locV();
 }
-function ringStart(v){stopRing();const r=$('ring');r.volume=v;r.currentTime=0;r.play().catch(()=>{});if(v==1)ringIv=setInterval(()=>navigator.vibrate&&navigator.vibrate([400,200,400]),1500)}
+function ringStart(v){stopRing();if(silentNow())return;const r=$('ring');r.volume=v;r.currentTime=0;r.play().catch(()=>{});if(v==1)ringIv=setInterval(()=>navigator.vibrate&&navigator.vibrate([400,200,400]),1500)}
 function stopRing(){clearInterval(ringIv);ringIv=0;const r=$('ring');r.pause();navigator.vibrate&&navigator.vibrate(0)}
 const PH=c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="${c}"><path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.6 3.6a1 1 0 0 1-.25 1z"/></svg>`;
 function callTxt(m,k){const n=esc(m.sender==me.id?me.nick:cur.isG?nm(m.sender):cur.nick);return PH(k.ok?'#4ade80':'#9ca3af')+' <b>'+n+'</b> звонил'+(k.ok?'<br>Звонок продлился '+fmt(k.d):(m.sender!=me.id&&!cur.isG?'<br><button class="fd" style="width:auto;border-radius:12px;padding:0 12px;margin-top:6px" data-cb>Перезвонить</button>':''))}
