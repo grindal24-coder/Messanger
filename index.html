@@ -171,7 +171,8 @@ button.i{background:var(--p2);padding:9px 12px}
 /* звонок на заблокированном экране: виден только вызов, чаты недоступны */
 body.lockcall #side,body.lockcall #ph,body.lockcall #chat,body.lockcall #st,body.lockcall #pp,body.lockcall #sheet,body.lockcall #cbann,body.lockcall #modal,body.lockcall #modal2,body.lockcall #cm{display:none!important}
 body.lockcall #call{display:flex!important}
-body.lockcall #chd,body.lockcall #cmin,body.lockcall #cf{display:none!important}
+body.lockcall #cmin,body.lockcall #cf{display:none!important}
+body.lockcall #chd{display:flex!important;justify-content:center;padding-top:38px;opacity:.9}
 body.lockcall #cinfo{padding-top:40px}
 #chd{position:absolute;top:max(14px,env(safe-area-inset-top));left:14px;display:flex;align-items:center;gap:10px;z-index:6;max-width:66vw}
 #chd #cmin{position:static}
@@ -994,6 +995,7 @@ async function pushTest(){ // пошаговая проверка фоновых
   ok('Ключ резервной очереди',st.key>0,st.key>0?'есть':'нет');
   ok('Уведомления разрешены в Android',!!st.notif,st.notif?'':'Настройки → Приложения → HLZ → Уведомления → Разрешить');
   ok('Вызовы поверх блокировки разрешены',!!st.fullscreen,st.fullscreen?'':'Настройки → Приложения → HLZ → Специальный доступ → Полноэкранные уведомления');
+  ok('Показ звонка поверх других приложений',!!st.overlay,st.overlay?'':'Включи «Поверх других приложений» — иначе при закрытом приложении будет только уведомление');
   try{window.HLZ.testNotif('HLZ','Тестовое уведомление ✅');ok('Локальное уведомление отправлено',true,'должно появиться сверху прямо сейчас')}
   catch(e){ok('Локальное уведомление',false,String(e))}
   try{
@@ -1023,11 +1025,12 @@ async function pushTest(){ // пошаговая проверка фоновых
   +`<div style="color:var(--g);font-size:13px">${esc(tail)}</div>`
   +(lg?`<div style="color:var(--g);font-size:12px;margin-top:8px">Журнал службы:</div><pre style="color:#8b93a1;font-size:11px;white-space:pre-wrap;max-height:190px;overflow:auto;margin:4px 0 0">${esc(lg)}</pre>`
       :`<div style="color:#f59e0b;font-size:12px;margin-top:8px">Журнала нет: служба приёма ни разу не запускалась. Проверь ключ и разрешение на уведомления, затем выключи и снова включи «Уведомления».</div>`)
-  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button><button class="i" id="pfm">Тест токена</button></div>`:'')
+  +(window.HLZ?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0"><button class="i" id="pnt">Разрешить уведомления</button><button class="i" id="pfs">Полноэкранные</button><button class="i" id="pov">Поверх других</button><button class="i" id="pst">Настройки</button><button class="i" id="pq">Тест очереди</button><button class="i" id="pfm">Тест токена</button></div>`:'')
   +'<button class="i" id="ptx">Закрыть</button>');
  $('ptx').onclick=()=>m.classList.add('hide');
  if($('pnt'))$('pnt').onclick=()=>{try{window.HLZ.requestNotif()}catch(e){}setTimeout(()=>pushTest(),1500)};
  if($('pfs'))$('pfs').onclick=()=>{try{window.HLZ.openSettings('fullscreen')}catch(e){}};
+ if($('pov'))$('pov').onclick=()=>{try{window.HLZ.overlay()}catch(e){}};
  if($('pst'))$('pst').onclick=()=>{try{window.HLZ.openSettings('app')}catch(e){}};
  if($('pq'))$('pq').onclick=async()=>{
   try{
@@ -1194,6 +1197,15 @@ function notifPanel(){
   };
  };
  $('dnda').onclick=()=>schedEdit(-1);
+ // 5 быстрых нажатий по заголовку — показать/скрыть экран проверки уведомлений
+ try{
+  let devN=0,devT=0;const ttl=m.querySelector('h3');
+  if(ttl)ttl.onclick=()=>{const n=Date.now();devN=(n-devT<1600)?devN+1:1;devT=n;
+   if(devN>=5){devN=0;
+    try{if(localStorage.getItem('hlz_devpanel'))localStorage.removeItem('hlz_devpanel');else localStorage.setItem('hlz_devpanel','1')}catch(e){}
+    m.classList.add('hide');openSettings();devShow();
+    setTimeout(()=>{const s3=$('s3');if(s3)s3.scrollIntoView({behavior:'smooth'})},150)}};
+ }catch(e){}
 }
 function schedEdit(idx){
  const s=(idx>=0&&DND.sched[idx])?DND.sched[idx]:{days:[1,2,3,4,5],from:'22:00',to:'08:00'};
@@ -1341,7 +1353,7 @@ const isHost=()=>{const c=C;return !!c&&(c.host==me.id||!!(c.tg&&c.tg.owner==me.
 const csTxt=()=>{const c=C;if(!c)return'';const xs=Object.values(c.P);if(c.t0)return'';
  if(c.role=='in'&&!c.acc)return'Входящий звонок…';if(xs.some(x=>x.live))return'';
  return xs.some(x=>!on.has(x.u.id))?'Вызов · не в сети, отправлено уведомление':'Вызов…'};
-setInterval(()=>{const c=C;if(!c)return;const t=c.t0?fmt(Date.now()-c.t0):'';const e=$('ct');if(e)e.textContent=t||(c.role=='in'&&!c.acc?'':'Вызов…');const s=$('cs');if(s)s.textContent=t||csTxt()},1000);
+setInterval(()=>{const c=C;if(!c)return;const xs=Object.values(c.P);const answered=xs.some(x=>x.answered||x.live);const t=c.t0?fmt(Date.now()-c.t0):'';const e=$('ct');if(e)e.textContent=t||(c.role=='in'&&!c.acc?'':(answered?'Соединение…':'Вызов…'));const s=$('cs');if(s)s.textContent=t||csTxt()},1000);
 function callInit(){sig=sb.channel('calls').on('broadcast',{event:'c'},m=>onSig(m.payload)).subscribe();
  sb.channel('gm').on('postgres_changes',{event:'*',schema:'public',table:'group_members'},()=>loadGroups()).on('postgres_changes',{event:'*',schema:'public',table:'groups'},()=>loadGroups()).on('postgres_changes',{event:'*',schema:'public',table:'reads'},p=>{const x=p.new;if(!x||!x.key)return;if(x.user_id==me.id)myRd[x.key]=x.read_at;else if(x.key==me.id)prRd[x.user_id]=x.read_at;list();if(cur)draw()}).subscribe()}
 const mic=()=>navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
@@ -1433,7 +1445,7 @@ function fitBar(el){
 addEventListener('resize',()=>{const b=$('cbar');if(b&&!b.classList.contains('hide'))fitBar(b.querySelector('.cbn'))});
 
 // --- соединение с участником ---
-function connTo(c,x){clearTimeout(x.ct);x.ct=setTimeout(()=>{if(C===c&&x.pc&&!x.live)dropPeer(c,x,true)},25000)}
+function connTo(c,x){clearTimeout(x.ct);x.ct=setTimeout(()=>{if(C===c&&x.pc&&!x.live)dropPeer(c,x,true)},45000)}
 function mkPc(c,x){
  const pc=x.pc=new RTCPeerConnection(ICE);
  c.st.getTracks().forEach(t=>pc.addTrack(t,c.st));if(c.vtr){x.vsend=pc.addTrack(c.vtr,c.st);vcodec(x,c.vk)}
@@ -1587,7 +1599,7 @@ function modAction(x,act,mode){
  else if(act=='undeaf'){x.st.deaf=0;x.st.fd=0;paintTile(x);toast('Наушники включены: '+x.u.nick)}
 }
 function dropPeer(c,x,notify){
- clearTimeout(x.ct);clearTimeout(x.rt);clearInterval(x.rs);
+ clearTimeout(x.ct);clearTimeout(x.rt);clearInterval(x.rs);clearInterval(x.as);
  if(notify)sg(x.u,'end',null,c.cid);
  try{x.pc&&x.pc.close()}catch(e){}
  if(x.au){try{x.au.pause();x.au.srcObject=null}catch(e){}}
@@ -1615,7 +1627,7 @@ async function callStart(tg,ids){
   const msg={sdp:o,roster:c.roster,gn:c.gn,gid:c.gid,host:c.host,st:myState(),ts:Date.now()};
   sg(u,'offer',msg,c.cid);
   x.rs=setInterval(()=>{if(C!==c||x.answered||x.live||!c.P[u.id]){clearInterval(x.rs);return}sg(u,'offer',msg,c.cid)},3000);
-  x.ct=setTimeout(()=>{if(C===c&&!x.live)dropPeer(c,x,true)},30000);
+  x.ct=setTimeout(()=>{if(C===c&&!x.live)dropPeer(c,x,true)},60000);
  }
  drawCall();
 }
@@ -1641,7 +1653,11 @@ async function callAcc(){
  mkPc(c,x);
  await x.pc.setRemoteDescription(c.offer);await flushQ(x);
  const a=await x.pc.createAnswer();await x.pc.setLocalDescription(a);
- sg(x.u,'answer',{sdp:a,st:myState()},c.cid);connTo(c,x);
+ const ans={sdp:a,st:myState()};
+ sg(x.u,'answer',ans,c.cid);connTo(c,x);
+ // подтверждение могло потеряться — повторяем, пока не установится связь
+ clearInterval(x.as);
+ x.as=setInterval(()=>{if(C!==c||x.live||!c.P[x.u.id]){clearInterval(x.as);return}sg(x.u,'answer',ans,c.cid)},2500);
  if(c.gid)await roomOpen(c.gid);
  roomTrack();drawCall();renderBar();
 }
@@ -1655,7 +1671,7 @@ function callEnd(notify){
   }catch(e){}
  }
  Object.values(c.P).forEach(x=>{
-  clearTimeout(x.ct);clearTimeout(x.rt);clearInterval(x.rs);
+  clearTimeout(x.ct);clearTimeout(x.rt);clearInterval(x.rs);clearInterval(x.as);
   if(notify)sg(x.u,'end',null,c.cid);
   try{x.pc&&x.pc.close()}catch(e){}
   if(x.au){try{x.au.pause();x.au.srcObject=null}catch(e){}}
@@ -1707,7 +1723,7 @@ async function onSig(p){
   if(!n.quiet&&!(window.HLZ&&document.hidden))ringStart(1);drawCall();
   if(n.quiet){toast('Тихий вызов: включён режим «не беспокоить» или выключены уведомления чата')}
   else if(document.hidden)notify('Входящий звонок',(p.d.gn?p.d.gn+' · ':'')+u.nick,'call');
-  n.to=setTimeout(()=>{if(C===n&&!n.acc)callEnd(true)},30000);
+  n.to=setTimeout(()=>{if(C===n&&!n.acc)callEnd(true)},60000);
   // нажали «Принять» в уведомлении — подключаемся сразу, без второго нажатия
   if(hlzAcc&&Date.now()-hlzAcc<60000){hlzAcc=0;setTimeout(()=>{if(C===n&&!n.acc)callAcc()},200)}
   return;
